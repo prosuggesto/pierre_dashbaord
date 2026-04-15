@@ -25,9 +25,7 @@ export default async function handler(req, res) {
     if (action === 'create_reservation') {
       const { nombre_jours_reserves, date_heure_iso } = payload.reservation;
       
-      // On utilise la string ISO telle quelle pour forcer l'heure dans la DB (+00)
-      // date_heure_iso doit être du type "YYYY-MM-DDTHH:mm:00"
-      const dateHeureMenage = `${date_heure_iso}+00:00`;
+      const dateHeureMenage = date_heure_iso;
 
       url = `${SUPABASE_URL}/rest/v1/reservation`;
       const resResp = await fetch(url, { 

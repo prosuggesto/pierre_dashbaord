@@ -23,33 +23,25 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
 
 const MONTH_NAMES = [
-  'Janvier','Février','Mars','Avril','Mai','Juin',
-  'Juillet','Août','Septembre','Octobre','Novembre','Décembre'
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
 ];
 
 function formatDate(d) {
   if (!d) return '—';
-  const date = new Date(d);
-  const day = date.getUTCDate();
-  const month = MONTH_NAMES[date.getUTCMonth()];
-  const year = date.getUTCFullYear();
-  return `${day} ${month} ${year}`;
+  return new Date(d).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
 }
 
 function formatDateTime(d) {
   if (!d) return '—';
-  const date = new Date(d);
-  const day = date.getUTCDate();
-  const month = MONTH_NAMES[date.getUTCMonth()];
-  const year = date.getUTCFullYear();
-  const hours = String(date.getUTCHours()).padStart(2, '0');
-  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-  return `${day} ${month} ${year} à ${hours}:${minutes}`;
+  return new Date(d).toLocaleDateString('fr-FR', {
+    day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit'
+  });
 }
 
 function isUpcoming(d) { return d ? new Date(d) > new Date() : false; }
 
-function showToast(msg, type='success') {
+function showToast(msg, type = 'success') {
   const c = $('#toastContainer');
   const t = document.createElement('div');
   t.className = `toast ${type}`;
@@ -66,7 +58,7 @@ let isRegisterMode = false;
 
 function setOneSignalUser(id) {
   window.OneSignalDeferred = window.OneSignalDeferred || [];
-  window.OneSignalDeferred.push(function(OneSignal) {
+  window.OneSignalDeferred.push(function (OneSignal) {
     if (id) {
       OneSignal.login(id);
     } else {
@@ -119,7 +111,7 @@ async function login(code) {
     localStorage.setItem('gm_user', JSON.stringify(data));
     setOneSignalUser(data.id);
     navigateToView(data.statut);
-    setTimeout(checkAndShowNotifPrompt, 1500); 
+    setTimeout(checkAndShowNotifPrompt, 1500);
   } catch (err) {
     console.error('Login error:', err);
     showAuthError('Erreur de connexion. Réessayez.');
@@ -157,12 +149,12 @@ function logout() {
 function checkSession() {
   const saved = localStorage.getItem('gm_user');
   if (saved) {
-    try { 
-      currentUser = JSON.parse(saved); 
+    try {
+      currentUser = JSON.parse(saved);
       setOneSignalUser(currentUser.id);
-      navigateToView(currentUser.statut); 
+      navigateToView(currentUser.statut);
       setTimeout(checkAndShowNotifPrompt, 2000);
-      return true; 
+      return true;
     }
     catch { localStorage.removeItem('gm_user'); }
   }
@@ -250,7 +242,7 @@ function initReservationModal() {
       return;
     }
 
-    const dateStr = `${annee}-${String(mois).padStart(2,'0')}-${String(jour).padStart(2,'0')}T${heure}:00`;
+    const dateStr = `${annee}-${String(mois).padStart(2, '0')}-${String(jour).padStart(2, '0')}T${heure}:00`;
     const dateHeure = new Date(dateStr);
     if (isNaN(dateHeure.getTime())) {
       showToast('Date invalide', 'error');
@@ -264,9 +256,9 @@ function initReservationModal() {
         body: {
           action: 'create_reservation',
           payload: {
-            reservation: { 
-              nombre_jours_reserves: nbJours, 
-              date_heure_iso: dateStr // On envoie la string brute pour éviter le décalage UTC
+            reservation: {
+              nombre_jours_reserves: nbJours,
+              date_heure_iso: dateHeure.toISOString()
             }
           }
         }
@@ -304,7 +296,7 @@ function initTimePicker() {
   // Build hour items (0-23)
   let hourHTML = '<div class="time-picker-spacer"></div>';
   for (let h = 0; h < 24; h++) {
-    hourHTML += `<div class="tp-item" data-val="${h}">${String(h).padStart(2,'0')}</div>`;
+    hourHTML += `<div class="tp-item" data-val="${h}">${String(h).padStart(2, '0')}</div>`;
   }
   hourHTML += '<div class="time-picker-spacer"></div>';
   hourCol.innerHTML = hourHTML;
@@ -312,7 +304,7 @@ function initTimePicker() {
   // Build minute items (00, 30)
   let minHTML = '<div class="time-picker-spacer"></div>';
   [0, 30].forEach(m => {
-    minHTML += `<div class="tp-item" data-val="${m}">${String(m).padStart(2,'0')}</div>`;
+    minHTML += `<div class="tp-item" data-val="${m}">${String(m).padStart(2, '0')}</div>`;
   });
   minHTML += '<div class="time-picker-spacer"></div>';
   minuteCol.innerHTML = minHTML;
@@ -461,7 +453,7 @@ function renderProrataTable() {
     }
 
     html += `<tr>
-      <td class="month-name">${MONTH_NAMES[m-1]}</td>
+      <td class="month-name">${MONTH_NAMES[m - 1]}</td>
       <td><input type="number" class="table-input" data-month="${m}" data-field="nombre_jours_reserves" value="${joursOcc || ''}" min="0" step="1" placeholder="ex: 14" /></td>
       <td><input type="number" class="table-input ${joursMois === 0 ? 'error' : ''}" data-month="${m}" data-field="nombre_jours_dans_le_mois" value="${joursMois || ''}" min="28" max="31" step="1" placeholder="ex: 31" /></td>
       <td><input type="number" class="table-input ${!elValid ? 'error' : ''}" data-month="${m}" data-field="total_facture_electricite" value="${totElec || ''}" min="0" step="0.01" placeholder="ex: 150" /></td>
@@ -610,7 +602,7 @@ function setOneSignalUser(userId) {
   if (!userId) return;
   console.log('GM [DEBUG]: Linking OneSignal with External ID ->', userId);
   window.OneSignalDeferred = window.OneSignalDeferred || [];
-  window.OneSignalDeferred.push(function(OneSignal) {
+  window.OneSignalDeferred.push(function (OneSignal) {
     OneSignal.login(userId);
     console.log('GM [DEBUG]: OneSignal login command sent for ID:', userId);
   });
@@ -642,7 +634,7 @@ function initNotifPrompt() {
   btnSubscribe.addEventListener('click', async () => {
     console.log("GM: Notif Subscribe clicked");
     modal.classList.remove('active');
-    
+
     // Marquer comme activé en base de données pour ce compte
     if (currentUser) {
       try {
@@ -667,7 +659,7 @@ function initNotifPrompt() {
     } else {
       console.log("GM: OneSignal not ready, using Deferred push");
       window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(function(OneSignal) {
+      window.OneSignalDeferred.push(function (OneSignal) {
         OneSignal.Notifications.requestPermission();
       });
     }
@@ -687,18 +679,18 @@ function checkAndShowNotifPrompt() {
   console.log("GM: Checking notif status for user", currentUser.id);
 
   window.OneSignalDeferred = window.OneSignalDeferred || [];
-  window.OneSignalDeferred.push(function(OneSignal) {
+  window.OneSignalDeferred.push(function (OneSignal) {
     console.log("GM: OneSignal status:", OneSignal.Notifications.permission);
-    
+
     // Si déjà accordé, on ne montre rien
     if (OneSignal.Notifications.permission === 'granted') {
       console.log("GM: Notifications already granted");
       return;
     }
-    
+
     // On s'assure que l'ID est bien lié
     OneSignal.login(currentUser.id);
-    
+
     // Afficher notre modal personnalisé
     modal.classList.add('active');
   });
@@ -758,7 +750,7 @@ if ('serviceWorker' in navigator) {
       };
     }
   }
-  
+
   document.addEventListener('DOMContentLoaded', () => {
     initUpdateButtons();
   });
