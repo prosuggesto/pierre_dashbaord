@@ -741,18 +741,16 @@ if ('serviceWorker' in navigator) {
     }, 500);
   }
 
-  // Liaison des boutons de mise à jour manuelle
+  // Liaison du bouton de mise à jour flottant
   function initUpdateButtons() {
-    const btns = [$('#checkUpdateBtn'), $('#checkUpdateBtnMenage')];
-    btns.forEach(btn => {
-      if (btn) {
-        btn.onclick = (e) => {
-          e.preventDefault();
-          showToast('Mise à jour en cours...');
-          forceAppUpdate();
-        };
-      }
-    });
+    const btn = $('#checkUpdateBtnGlobal');
+    if (btn) {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        showToast('Mise à jour en cours...');
+        forceAppUpdate();
+      };
+    }
   }
 
   // Vérification quotidienne à 00:00

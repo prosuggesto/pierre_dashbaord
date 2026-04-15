@@ -81,9 +81,6 @@
         <a href="#" class="nav-item nav-logout" id="pierreLogout">
           <span class="nav-icon">🚪</span> Déconnexion
         </a>
-        <a href="#" class="nav-item nav-update" id="checkUpdateBtn" style="margin-top:auto; font-size: 0.8rem; opacity: 0.6;">
-          <span class="nav-icon">🔄</span> Mettre à jour l'app
-        </a>
       </nav>
     </aside>
 
@@ -220,10 +217,7 @@
   <div id="menage-view" class="view">
       <div class="mobile-header">
         <h1 id="menageTitle">🧹 Mes Missions</h1>
-        <div style="display: flex; gap: 10px; align-items: center;">
-          <button class="btn btn-ghost btn-sm" id="checkUpdateBtnMenage" style="font-size: 0.7rem; padding: 4px 8px;">🔄 Maj</button>
-          <button class="btn btn-ghost" id="menageLogout">Déconnexion</button>
-        </div>
+        <button class="btn btn-ghost" id="menageLogout">Déconnexion</button>
       </div>
     <div class="menage-content">
       <div class="section-header">
@@ -255,6 +249,10 @@
       </div>
     </div>
   </div>
+
+  <button class="floating-update-btn" id="checkUpdateBtnGlobal" title="Mettre à jour l'app">
+    🔄
+  </button>
 
   <script src="js/app.js"></script>
 </body>
