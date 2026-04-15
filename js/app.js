@@ -718,75 +718,57 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  let refreshing = false;
   let swRegistration = null;
-
-  // Détection du changement de contrôleur (nouveau SW actif)
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (refreshing) return;
-    refreshing = true;
-    window.location.reload();
-  });
-
-  function showUpdateToast(reg) {
-    const container = $('#toastContainer');
-    const toast = document.createElement('div');
-    toast.className = 'toast info update-toast';
-    toast.style.display = 'flex';
-    toast.style.flexDirection = 'column';
-    toast.style.gap = '10px';
-    
-    toast.innerHTML = `
-      <div>Une mise à jour est disponible !</div>
-      <button class="btn btn-primary btn-sm" style="font-size: 0.75rem; padding: 6px;">Relancer pour mettre à jour</button>
-    `;
-    
-    toast.querySelector('button').onclick = () => {
-      if (reg.waiting) {
-        reg.waiting.postMessage({ action: 'skipWaiting' });
-      }
-    };
-    
-    container.appendChild(toast);
-  }
 
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('OneSignalSDKWorker.js').then(reg => {
       swRegistration = reg;
-      console.log("GM: SW Registered");
-
-      // Si un SW attend déjà (ex: maj téléchargée lors d'une session précédente)
-      if (reg.waiting) {
-        showUpdateToast(reg);
-      }
-
-      reg.onupdatefound = () => {
-        const installingWorker = reg.installing;
-        installingWorker.onstatechange = () => {
-          if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            showUpdateToast(reg);
-          }
-        };
-      };
+      console.log("GM: SW Registered (Manual Mode)");
     }).catch(e => console.log('SW fail:', e));
   });
+
+  async function forceAppUpdate() {
+    console.log("GM: Forcing update...");
+    if (swRegistration) {
+      await swRegistration.update();
+      if (swRegistration.waiting) {
+        swRegistration.waiting.postMessage({ action: 'skipWaiting' });
+      }
+    }
+    // Petit délai pour laisser le temps au SW de switcher
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
+  }
 
   // Liaison des boutons de mise à jour manuelle
   function initUpdateButtons() {
     const btns = [$('#checkUpdateBtn'), $('#checkUpdateBtnMenage')];
     btns.forEach(btn => {
       if (btn) {
-        btn.addEventListener('click', (e) => {
+        btn.onclick = (e) => {
           e.preventDefault();
-          if (swRegistration) {
-            swRegistration.update();
-            showToast('Recherche de mise à jour...');
-          }
-        });
+          showToast('Mise à jour en cours...');
+          forceAppUpdate();
+        };
       }
     });
   }
+
+  // Vérification quotidienne à 00:00
+  function scheduleDailyUpdate() {
+    setInterval(() => {
+      const now = new Date();
+      // On vérifie si on est entre 00:00 et 00:01
+      if (now.getHours() === 0 && now.getMinutes() === 0) {
+        console.log("GM: Scheduled midnight update triggered");
+        forceAppUpdate();
+      }
+    }, 60000); // On vérifie toutes les minutes
+  }
   
-  // Appeler l'init des boutons quand le DOM est prêt
-  document.addEventListener('DOMContentLoaded', initUpdateButtons);
+  document.addEventListener('DOMContentLoaded', () => {
+    initUpdateButtons();
+    scheduleDailyUpdate();
+  });
 }
