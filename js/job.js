@@ -33,21 +33,16 @@ async function initJob() {
     if (pathParts.length > 0) jobId = pathParts[0];
   }
 
-  if (!jobId || isNaN(parseInt(jobId))) {
-    showError("ID de mission invalide ou manquant.");
+  if (!jobId) {
+    showError("ID de mission manquant.");
     $('#validateBtn').disabled = true;
     return;
   }
 
-  $('#dispId').textContent = `#${jobId}`;
-  $('#jobDetails').style.display = 'block';
-
-  // Optionally fetch job details to show what we are validating
+  // Optionally fetch job details if needed for status check
   try {
     const { data, error } = await sb.from('jobs').select('*').eq('id', jobId).maybeSingle();
     if (data) {
-      $('#jobTitle').textContent = `Mission : ${data.job_name || 'Ménage'}`;
-      $('#dispType').textContent = data.job_name || 'Ménage';
       if (data.statut_job === 'notifié') {
          showSuccessState(); // Already validated
       }
