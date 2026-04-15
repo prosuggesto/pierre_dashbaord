@@ -692,22 +692,25 @@ input[type=number]{-moz-appearance:textfield}
 }
 
 .menage-empty-state {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding-bottom: 10vh; /* Petit ajustement pour l'équilibre visuel */
+  pointer-events: none; /* Pour ne pas bloquer les clics en dessous si besoin */
 }
 .menage-empty-icon {
-  font-size: 5rem;
-  margin-bottom: 15px;
-  opacity: 0.3;
+  font-size: 3rem;
+  margin-bottom: 12px;
+  opacity: 0.4;
 }
 .menage-empty-text {
-  font-size: 1.2rem;
-  color: var(--g400);
-  font-weight: 500;
+  font-size: 1rem;
+  color: var(--g500);
 }
 
 /* Floating Update Button */
