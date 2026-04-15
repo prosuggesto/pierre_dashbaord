@@ -2,7 +2,7 @@
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/:id([a-zA-Z0-9-]+)",
+      "source": "/:id([a-zA-Z0-9-]{20,})",
       "destination": "/job.html?id=:id"
     }
   ]
