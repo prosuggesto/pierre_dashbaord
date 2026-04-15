@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Application de gestion de ménage, réservations et prorata d'impôts" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <title>Gestion Ménage</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ======================================
+       AUTH VIEW
+       ====================================== -->
+  <div id="auth-view" class="view active">
+    <div class="auth-container">
+      <div class="auth-card">
+        <div class="auth-logo">🏠</div>
+        <h1>Gestion Ménage</h1>
+        <p class="auth-subtitle" id="authSubtitle">Entrez votre code pour accéder</p>
+
+        <div class="auth-form">
+          <div class="input-group">
+            <input type="text" id="codeInput" placeholder="Votre code" autocomplete="off" maxlength="50" />
+          </div>
+          <button id="authBtn" class="btn btn-primary btn-full">Se connecter</button>
+          <p class="auth-toggle" id="authToggle">
+            Première visite ?
+            <a href="#" id="toggleAuthLink">Créer un code</a>
+          </p>
+          <div id="authError" class="auth-message error" style="display:none"></div>
+          <div id="authSuccess" class="auth-message success" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================
+       PIERRE VIEW
+       ====================================== -->
+  <div id="pierre-view" class="view">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2>👤 Pierre</h2>
+        <button class="close-sidebar" id="closeSidebar">✕</button>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-section="reservations" id="nav-reservations">
+          <span class="nav-icon">📅</span> Réservations
+        </a>
+        <a href="#" class="nav-item" data-section="prorata" id="nav-prorata">
+          <span class="nav-icon">📊</span> Prorata Impôts
+        </a>
+        <a href="#" class="nav-item nav-logout" id="pierreLogout">
+          <span class="nav-icon">🚪</span> Déconnexion
+        </a>
+      </nav>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="mobile-header">
+      <button class="burger-btn" id="burgerBtn">
+        <span></span><span></span><span></span>
+      </button>
+      <h1 id="pierreTitle">Réservations</h1>
+    </div>
+
+    <main class="main-content">
+      <!-- RESERVATIONS SECTION -->
+      <div id="reservations-section" class="section">
+        <div class="section-header">
+          <h2>📅 Réservations</h2>
+          <button class="btn btn-primary" id="createReservationBtn">+ Nouvelle réservation</button>
+        </div>
+        <div id="reservationsList" class="cards-container">
+          <div class="loading-spinner"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- PRORATA SECTION -->
+      <div id="prorata-section" class="section" style="display:none">
+        <div class="prorata-header">
+          <button class="btn btn-icon" id="prevYear">◀</button>
+          <h2 id="prorataYear">2026</h2>
+          <button class="btn btn-icon" id="nextYear">▶</button>
+        </div>
+        <div class="table-container">
+          <table class="prorata-table" id="prorataTable">
+            <thead>
+              <tr>
+                <th>Mois</th>
+                <th>Jours occupés</th>
+                <th>Jours / mois</th>
+                <th>Total Élec. €</th>
+                <th>Total Eau €</th>
+                <th>Prorata Élec.</th>
+                <th>Prorata Eau</th>
+              </tr>
+            </thead>
+            <tbody id="prorataBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ======================================
+       CREATE RESERVATION MODAL
+       ====================================== -->
+  <div id="createReservationModal" class="modal">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Nouvelle Réservation</h2>
+        <button class="close-modal" id="closeReservationModal">✕</button>
+      </div>
+      <form id="reservationForm">
+        <div class="form-group">
+          <label for="nbJours">Nombre de jours total</label>
+          <input type="number" id="nbJours" min="1" step="1" required placeholder="ex: 5" />
+        </div>
+        <p style="margin-bottom:14px;font-size:.83rem;color:var(--g400);font-weight:500;">
+          Date et heure de sortie
+        </p>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="sortieAnnee">Année</label>
+            <input type="number" id="sortieAnnee" min="2000" required placeholder="ex: 2026" />
+          </div>
+          <div class="form-group">
+            <label for="sortieMois">Mois</label>
+            <select id="sortieMois" required>
+              <option value="" disabled selected>Mois</option>
+              <option value="1">Janvier</option>
+              <option value="2">Février</option>
+              <option value="3">Mars</option>
+              <option value="4">Avril</option>
+              <option value="5">Mai</option>
+              <option value="6">Juin</option>
+              <option value="7">Juillet</option>
+              <option value="8">Août</option>
+              <option value="9">Septembre</option>
+              <option value="10">Octobre</option>
+              <option value="11">Novembre</option>
+              <option value="12">Décembre</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="sortieJour">Jour</label>
+            <input type="number" id="sortieJour" min="1" max="31" required placeholder="ex: 15" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Heure de sortie</label>
+          <button type="button" class="time-trigger" id="timePickerTrigger">
+            <span id="selectedTimeDisplay" class="placeholder">Sélectionner l'heure</span>
+          </button>
+          <input type="hidden" id="sortieHeure" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" id="submitReservation">
+          Créer la réservation
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================
+       TIME PICKER (iOS-style)
+       ====================================== -->
+  <div id="timePicker" class="time-picker-overlay">
+    <div class="time-picker-backdrop" id="tpBackdrop"></div>
+    <div class="time-picker-sheet">
+      <div class="time-picker-header">
+        <button type="button" class="tp-cancel" id="tpCancel">Annuler</button>
+        <span>Heure de sortie</span>
+        <button type="button" class="tp-confirm" id="tpConfirm">OK</button>
+      </div>
+      <div class="time-picker-body">
+        <div class="time-picker-col" id="hourCol"></div>
+        <div class="time-picker-sep">:</div>
+        <div class="time-picker-col" id="minuteCol"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================
+       MENAGE VIEW
+       ====================================== -->
+  <div id="menage-view" class="view">
+    <div class="menage-header">
+      <h1>🏠 Espace Ménage</h1>
+      <button class="btn btn-ghost btn-sm" id="menageLogout">Déconnexion</button>
+    </div>
+    <div class="menage-content">
+      <div class="section-header">
+        <h2>📅 Réservations</h2>
+      </div>
+      <div id="menageReservationsList" class="cards-container">
+        <div class="loading-spinner"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
