@@ -660,6 +660,37 @@ input[type=number]{-moz-appearance:textfield}
   .form-row{grid-template-columns:1fr}
 }
 
+/* --- MENAGE VIEW SPECIFIC --- */
+.menage-static-nav {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--bg-alt);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.menage-static-nav h1 { font-size: 1.1rem; font-weight: 700; color: #fff; margin: 0; }
+
+.menage-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  text-align: center;
+  width: 100%;
+}
+.menage-empty-icon {
+  font-size: 3.5rem;
+  margin-bottom: 15px;
+  opacity: 0.4;
+}
+.menage-empty-text {
+  font-size: 1rem;
+  color: var(--g500);
+}
+
 /* Floating Update Button */
 .floating-update-btn {
   position: fixed;

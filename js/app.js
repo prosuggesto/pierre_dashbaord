@@ -551,7 +551,11 @@ async function loadMenageReservations() {
 
 function renderMenageJobs(list, container) {
   if (!list.length) {
-    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><p>Aucune mission</p></div>';
+    container.innerHTML = `
+      <div class="menage-empty-state">
+        <div class="menage-empty-icon">📅</div>
+        <div class="menage-empty-text">Aucune mission</div>
+      </div>`;
     return;
   }
   container.innerHTML = list.map((job, i) => {
