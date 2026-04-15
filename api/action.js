@@ -23,22 +23,52 @@ export default async function handler(req, res) {
     let method = 'POST';
 
     if (action === 'create_reservation') {
+      const { nombre_jours_reserves, date_heure_iso } = payload.reservation;
+      
+      // On utilise la string ISO telle quelle pour forcer l'heure dans la DB (+00)
+      // date_heure_iso doit être du type "YYYY-MM-DDTHH:mm:00"
+      const dateHeureMenage = `${date_heure_iso}+00:00`;
+
       url = `${SUPABASE_URL}/rest/v1/reservation`;
-      const resResp = await fetch(url, { method, headers, body: JSON.stringify(payload.reservation) });
+      const resResp = await fetch(url, { 
+        method, 
+        headers, 
+        body: JSON.stringify({ 
+          nombre_jours_reserves, 
+          date_heure_menage: dateHeureMenage 
+        }) 
+      });
       const resData = await resResp.json();
       
-      // Create jobs for cleaners
+      // On récupère le ID de la résa créée (si besoin, mais ici on lie aux cleaners)
+      const resId = (resData[0] || resData).id;
+
+      // Create jobs for cleaners with notif_at
       const userResp = await fetch(`${SUPABASE_URL}/rest/v1/users?statut=eq.menage&select=id`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
       const users = await userResp.json();
       
       if (users && users.length) {
         const jobs = [];
-        const names = ['j-2', 'j-1', 'h-5', 'h-1'];
+        const baseDate = new Date(dateHeureMenage);
+        
         users.forEach(u => {
-          names.forEach(n => {
-            jobs.push({ id_cleaner: u.id, job_name: n, statut_job: 'en_attente', quantite_job_active: 0 });
-          });
+          // j-2 : -48h
+          const d_j2 = new Date(baseDate.getTime() - (48 * 60 * 60 * 1000));
+          jobs.push({ id_cleaner: u.id, job_name: 'j-2', statut_job: 'en_attente', quantite_job_active: 0, notif_at: d_j2.toISOString() });
+          
+          // j-1 : -24h
+          const d_j1 = new Date(baseDate.getTime() - (24 * 60 * 60 * 1000));
+          jobs.push({ id_cleaner: u.id, job_name: 'j-1', statut_job: 'en_attente', quantite_job_active: 0, notif_at: d_j1.toISOString() });
+          
+          // h-5 : -5h
+          const d_h5 = new Date(baseDate.getTime() - (5 * 60 * 60 * 1000));
+          jobs.push({ id_cleaner: u.id, job_name: 'h-5', statut_job: 'en_attente', quantite_job_active: 0, notif_at: d_h5.toISOString() });
+          
+          // h-1 : -1h
+          const d_h1 = new Date(baseDate.getTime() - (1 * 60 * 60 * 1000));
+          jobs.push({ id_cleaner: u.id, job_name: 'h-1', statut_job: 'en_attente', quantite_job_active: 0, notif_at: d_h1.toISOString() });
         });
+
         await fetch(`${SUPABASE_URL}/rest/v1/jobs`, { method: 'POST', headers, body: JSON.stringify(jobs) });
       }
       return res.status(200).json(resData[0] || resData);

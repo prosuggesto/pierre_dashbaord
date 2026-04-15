@@ -256,7 +256,10 @@ function initReservationModal() {
         body: {
           action: 'create_reservation',
           payload: {
-            reservation: { nombre_jours_reserves: nbJours, date_heure_menage: dateHeure.toISOString() }
+            reservation: { 
+              nombre_jours_reserves: nbJours, 
+              date_heure_iso: dateStr // On envoie la string brute pour éviter le décalage UTC
+            }
           }
         }
       });
