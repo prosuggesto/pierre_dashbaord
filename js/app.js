@@ -554,7 +554,7 @@ function renderMenageJobs(list, container) {
     container.innerHTML = `
       <div class="menage-empty-state">
         <div class="menage-empty-icon">📅</div>
-        <div class="menage-empty-text">Aucune mission</div>
+        <div class="menage-empty-text">Aucune réservation</div>
       </div>`;
     return;
   }
