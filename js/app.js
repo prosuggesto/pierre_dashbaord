@@ -49,6 +49,17 @@ function showToast(msg, type='success') {
 let currentUser = null;
 let isRegisterMode = false;
 
+function setOneSignalUser(id) {
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(function(OneSignal) {
+    if (id) {
+      OneSignal.login(id);
+    } else {
+      OneSignal.logout();
+    }
+  });
+}
+
 function initAuth() {
   const authBtn = $('#authBtn');
   const toggleLink = $('#toggleAuthLink');
@@ -92,6 +103,7 @@ async function login(code) {
     if (!data) { showAuthError('Code erroné. Vérifiez votre code ou créez-en un nouveau.'); return; }
     currentUser = data;
     localStorage.setItem('gm_user', JSON.stringify(data));
+    setOneSignalUser(data.id);
     navigateToView(data.statut);
   } catch (err) {
     console.error('Login error:', err);
@@ -108,6 +120,7 @@ async function register(code) {
     if (error) throw error;
     currentUser = data;
     localStorage.setItem('gm_user', JSON.stringify(data));
+    setOneSignalUser(data.id);
 
     // Rattrapage: créer les jobs pour toutes les réservations futures
     await catchUpJobsForNewUser(data.id);
@@ -123,6 +136,7 @@ async function register(code) {
 function logout() {
   currentUser = null;
   localStorage.removeItem('gm_user');
+  setOneSignalUser(null);
   showView('auth');
   $('#codeInput').value = '';
   hideAuthMessages();
@@ -131,7 +145,12 @@ function logout() {
 function checkSession() {
   const saved = localStorage.getItem('gm_user');
   if (saved) {
-    try { currentUser = JSON.parse(saved); navigateToView(currentUser.statut); return true; }
+    try { 
+      currentUser = JSON.parse(saved); 
+      setOneSignalUser(currentUser.id);
+      navigateToView(currentUser.statut); 
+      return true; 
+    }
     catch { localStorage.removeItem('gm_user'); }
   }
   return false;
