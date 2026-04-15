@@ -622,6 +622,19 @@ input[type=number]{-moz-appearance:textfield}
 }
 
 /* ============================================
+   FORCIBLY HIDE ONESIGNAL DEFAULT UI
+   ============================================ */
+#onesignal-slidedown-container,
+#onesignal-popover-container,
+.onesignal-slidedown-dialog,
+.onesignal-slidedown-container {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* ============================================
    RESPONSIVE
    ============================================ */
 @media(max-width:768px){
