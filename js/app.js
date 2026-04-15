@@ -105,6 +105,7 @@ async function login(code) {
     localStorage.setItem('gm_user', JSON.stringify(data));
     setOneSignalUser(data.id);
     navigateToView(data.statut);
+    setTimeout(checkAndShowNotifPrompt, 1500); // Demander les notifs après connexion
   } catch (err) {
     console.error('Login error:', err);
     showAuthError('Erreur de connexion. Réessayez.');
@@ -126,7 +127,10 @@ async function register(code) {
     await catchUpJobsForNewUser(data.id);
 
     showAuthSuccess('Compte créé !');
-    setTimeout(() => navigateToView('menage'), 600);
+    setTimeout(() => {
+      navigateToView('menage');
+      setTimeout(checkAndShowNotifPrompt, 2000);
+    }, 600);
   } catch (err) {
     console.error('Register error:', err);
     showAuthError('Erreur lors de la création. Réessayez.');
@@ -149,6 +153,7 @@ function checkSession() {
       currentUser = JSON.parse(saved); 
       setOneSignalUser(currentUser.id);
       navigateToView(currentUser.statut); 
+      setTimeout(checkAndShowNotifPrompt, 2000);
       return true; 
     }
     catch { localStorage.removeItem('gm_user'); }
@@ -646,22 +651,6 @@ function initNotifPrompt() {
 
   if (!modal) return;
 
-  const showPrompt = () => {
-    // Ne pas afficher si déjà abonné ou si refusé récemment (optionnel, OneSignal gère un peu ça)
-    modal.classList.add('active');
-  };
-
-  // Afficher après 2 secondes pour ne pas agresser au chargement
-  setTimeout(() => {
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(function(OneSignal) {
-      // Si l'utilisateur n'est pas encore abonné, on montre notre modal
-      if (OneSignal.Notifications.permission !== 'granted') {
-        showPrompt();
-      }
-    });
-  }, 2000);
-
   btnLater.addEventListener('click', () => modal.classList.remove('active'));
   $('#notifBackdrop').addEventListener('click', () => modal.classList.remove('active'));
 
@@ -670,6 +659,23 @@ function initNotifPrompt() {
     window.OneSignalDeferred.push(function(OneSignal) {
       OneSignal.Notifications.requestPermission();
     });
+  });
+}
+
+function checkAndShowNotifPrompt() {
+  const modal = $('#notifModal');
+  if (!modal || !currentUser) return;
+
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(function(OneSignal) {
+    // Si déjà accordé, on ne montre rien
+    if (OneSignal.Notifications.permission === 'granted') return;
+    
+    // On s'assure que l'ID est bien lié avant de montrer le prompt
+    OneSignal.login(currentUser.id);
+    
+    // Afficher notre modal personnalisé
+    modal.classList.add('active');
   });
 }
 
