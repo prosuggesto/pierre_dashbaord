@@ -551,6 +551,7 @@ async function loadMenageReservations() {
 
 function renderMenageJobs(list, container) {
   if (!list.length) {
+    container.classList.add('is-empty');
     container.innerHTML = `
       <div class="menage-empty-state">
         <div class="menage-empty-icon">📅</div>
@@ -558,6 +559,7 @@ function renderMenageJobs(list, container) {
       </div>`;
     return;
   }
+  container.classList.remove('is-empty');
   container.innerHTML = list.map((job, i) => {
     const r = job.reservation;
     const up = isUpcoming(r.date_heure_menage);

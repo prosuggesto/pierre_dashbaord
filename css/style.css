@@ -668,28 +668,46 @@ input[type=number]{-moz-appearance:textfield}
   padding: 16px 20px;
   background: var(--bg-alt);
   border-bottom: 1px solid var(--border);
-  margin-bottom: 20px;
 }
-.menage-static-nav h1 { font-size: 1.1rem; font-weight: 700; color: #fff; margin: 0; }
+.menage-top-bar h1, .menage-static-nav h1 { font-size: 1.1rem; font-weight: 700; color: #fff; margin: 0; }
+
+#menage-view.active {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.menage-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
+
+.cards-container.is-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .menage-empty-state {
-  grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 50vh;
   text-align: center;
-  width: 100%;
+  padding-bottom: 10vh; /* Petit ajustement pour l'équilibre visuel */
 }
 .menage-empty-icon {
-  font-size: 3.5rem;
+  font-size: 5rem;
   margin-bottom: 15px;
-  opacity: 0.4;
+  opacity: 0.3;
 }
 .menage-empty-text {
-  font-size: 1rem;
-  color: var(--g500);
+  font-size: 1.2rem;
+  color: var(--g400);
+  font-weight: 500;
 }
 
 /* Floating Update Button */
