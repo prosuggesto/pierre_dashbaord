@@ -631,6 +631,16 @@ function initSidebar() {
   $('#menageLogout').addEventListener('click', () => logout());
 }
 
+function setOneSignalUser(userId) {
+  if (!userId) return;
+  console.log('GM [DEBUG]: Linking OneSignal with External ID ->', userId);
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(function(OneSignal) {
+    OneSignal.login(userId);
+    console.log('GM [DEBUG]: OneSignal login command sent for ID:', userId);
+  });
+}
+
 function switchSection(name) {
   $$('.nav-item[data-section]').forEach(i => i.classList.toggle('active', i.dataset.section === name));
   $('#reservations-section').style.display = name === 'reservations' ? 'block' : 'none';
