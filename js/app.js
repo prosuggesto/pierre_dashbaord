@@ -744,6 +744,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(e => console.log('SW fail:', e));
+    navigator.serviceWorker.register('OneSignalSDKWorker.js').catch(e => console.log('SW fail:', e));
   });
 }
