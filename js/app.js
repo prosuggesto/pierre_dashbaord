@@ -654,10 +654,22 @@ function initNotifPrompt() {
   btnLater.addEventListener('click', () => modal.classList.remove('active'));
   $('#notifBackdrop').addEventListener('click', () => modal.classList.remove('active'));
 
-  btnSubscribe.addEventListener('click', () => {
+  btnSubscribe.addEventListener('click', async () => {
     console.log("GM: Notif Subscribe clicked");
     modal.classList.remove('active');
     
+    // Marquer comme activé en base de données pour ce compte
+    if (currentUser) {
+      try {
+        await sb.from('users').update({ notif_active: true }).eq('id', currentUser.id);
+        currentUser.notif_active = true;
+        localStorage.setItem('gm_user', JSON.stringify(currentUser));
+        console.log("GM: Updated notif_active in Supabase");
+      } catch (err) {
+        console.error("GM: Error updating notif_active:", err);
+      }
+    }
+
     if (window.OneSignal && window.OneSignal.Notifications) {
       console.log("GM: Triggering direct requestPermission");
       window.OneSignal.Notifications.requestPermission();
@@ -674,6 +686,12 @@ function initNotifPrompt() {
 function checkAndShowNotifPrompt() {
   const modal = $('#notifModal');
   if (!modal || !currentUser) return;
+
+  // Si on a déjà marqué l'utilisateur comme ayant activé les notifs, on ne montre rien
+  if (currentUser.notif_active === true) {
+    console.log("GM: Notifications already active in database profile");
+    return;
+  }
 
   console.log("GM: Checking notif status for user", currentUser.id);
 
