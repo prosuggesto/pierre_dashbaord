@@ -703,12 +703,6 @@ function checkAndShowNotifPrompt() {
     return;
   }
 
-  // Si on a déjà marqué l'utilisateur comme ayant activé les notifs dans la DB, on s'arrête aussi
-  if (currentUser.notif_active === true) {
-    console.log("GM: Notifications already active in database profile");
-    return;
-  }
-
   console.log("GM: Checking notif status for user", currentUser.id);
 
   window.OneSignalDeferred = window.OneSignalDeferred || [];
