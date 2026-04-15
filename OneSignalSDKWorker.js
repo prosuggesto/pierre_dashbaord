@@ -1,6 +1,7 @@
 importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
-const CACHE_NAME = 'gestion-menage-v1';
+const APP_VERSION = '1.0.1'; // Change this to force update
+const CACHE_NAME = 'gestion-menage-' + APP_VERSION;
 const STATIC_ASSETS = [
   '/',
   '/index.html',

@@ -3,11 +3,18 @@
    ========================================================== */
 
 // ==========================================================
-// 1. SUPABASE CLIENT
+// 1. SERVICES
 // ==========================================================
-const SUPABASE_URL = 'https://hgqndkfkuitafuzawuxl.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhncW5ka2ZrdWl0YWZ1emF3dXhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5MzQ4OTIsImV4cCI6MjA2MzUxMDg5Mn0.Yixc4Pw9w3NDtxx5WTuU1YAtbN5gh60a6WQzGKKOFjY';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+async function api(path, options = {}) {
+  const resp = await fetch(path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.message || data.error || 'API Error');
+  return data;
+}
 
 // ==========================================================
 // 2. UTILS
@@ -98,14 +105,13 @@ function initAuth() {
 async function login(code) {
   hideAuthMessages();
   try {
-    const { data, error } = await sb.from('users').select('*').eq('code', code).maybeSingle();
-    if (error) throw error;
+    const data = await api('/api/auth', { method: 'POST', body: { action: 'login', code } });
     if (!data) { showAuthError('Code erroné. Vérifiez votre code ou créez-en un nouveau.'); return; }
     currentUser = data;
     localStorage.setItem('gm_user', JSON.stringify(data));
     setOneSignalUser(data.id);
     navigateToView(data.statut);
-    setTimeout(checkAndShowNotifPrompt, 1500); // Demander les notifs après connexion
+    setTimeout(checkAndShowNotifPrompt, 1500); 
   } catch (err) {
     console.error('Login error:', err);
     showAuthError('Erreur de connexion. Réessayez.');
@@ -115,16 +121,10 @@ async function login(code) {
 async function register(code) {
   hideAuthMessages();
   try {
-    const { data: existing } = await sb.from('users').select('id').eq('code', code).maybeSingle();
-    if (existing) { showAuthError('Ce code est déjà utilisé. Choisissez-en un autre.'); return; }
-    const { data, error } = await sb.from('users').insert({ code, statut: 'menage' }).select().single();
-    if (error) throw error;
+    const data = await api('/api/auth', { method: 'POST', body: { action: 'register', code } });
     currentUser = data;
     localStorage.setItem('gm_user', JSON.stringify(data));
     setOneSignalUser(data.id);
-
-    // Rattrapage: créer les jobs pour toutes les réservations futures
-    await catchUpJobsForNewUser(data.id);
 
     showAuthSuccess('Compte créé !');
     setTimeout(() => {
@@ -187,8 +187,7 @@ async function loadPierreReservations() {
   const c = $('#reservationsList');
   c.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
   try {
-    const { data, error } = await sb.from('reservation').select('*').order('date_heure_menage', { ascending: false });
-    if (error) throw error;
+    const data = await api('/api/data?type=reservations_pierre');
     renderReservations(data || [], c);
   } catch (err) {
     console.error(err);
@@ -252,11 +251,15 @@ function initReservationModal() {
     }
 
     try {
-      const { error: resErr } = await sb.from('reservation')
-        .insert({ nombre_jours_reserves: nbJours, date_heure_menage: dateHeure.toISOString() });
-      if (resErr) throw resErr;
-
-      await createJobsForReservation();
+      await api('/api/action', {
+        method: 'POST',
+        body: {
+          action: 'create_reservation',
+          payload: {
+            reservation: { nombre_jours_reserves: nbJours, date_heure_menage: dateHeure.toISOString() }
+          }
+        }
+      });
 
       showToast('Réservation créée !');
       modal.classList.remove('active');
@@ -274,51 +277,6 @@ function initReservationModal() {
   });
 }
 
-async function createJobsForReservation() {
-  try {
-    const { data: users, error } = await sb.from('users').select('id').eq('statut', 'menage');
-    if (error) throw error;
-    if (!users || !users.length) return;
-
-    const jobs = [];
-    const names = ['j-2', 'j-1', 'h-5', 'h-1'];
-    users.forEach(u => {
-      names.forEach(n => {
-        jobs.push({ id_cleaner: u.id, job_name: n, statut_job: 'en_attente', quantite_job_active: 0 });
-      });
-    });
-
-    const { error: jErr } = await sb.from('jobs').insert(jobs);
-    if (jErr) throw jErr;
-  } catch (err) {
-    console.error('Jobs error:', err);
-  }
-}
-
-async function catchUpJobsForNewUser(userId) {
-  try {
-    // Récupérer toutes les réservations futures
-    const { data: futureRes, error } = await sb.from('reservation')
-      .select('*')
-      .gt('date_heure_menage', new Date().toISOString());
-    if (error) throw error;
-    if (!futureRes || !futureRes.length) return;
-
-    const names = ['j-2', 'j-1', 'h-5', 'h-1'];
-    const jobs = [];
-    futureRes.forEach(() => {
-      names.forEach(n => {
-        jobs.push({ id_cleaner: userId, job_name: n, statut_job: 'en_attente', quantite_job_active: 0 });
-      });
-    });
-
-    const { error: jErr } = await sb.from('jobs').insert(jobs);
-    if (jErr) throw jErr;
-    console.log(`Rattrapage: ${jobs.length} jobs créés pour ${futureRes.length} réservation(s) future(s)`);
-  } catch (err) {
-    console.error('Catch-up jobs error:', err);
-  }
-}
 
 // ==========================================================
 // 6. TIME PICKER (iOS-style)
@@ -438,12 +396,10 @@ async function loadProrata() {
   prorataLocalEdits = {};
 
   try {
-    const { data: pData, error: pErr } = await sb.from('prorata_charges').select('*').eq('annee', prorataYear);
-    if (pErr) throw pErr;
+    const pData = await api(`/api/data?type=prorata&year=${prorataYear}`);
     (pData || []).forEach(r => { prorataCache[r.mois] = r; });
 
-    const { data: rData, error: rErr } = await sb.from('reservation').select('*');
-    if (rErr) throw rErr;
+    const rData = await api('/api/data?type=all_reservations');
     allReservationsForProrata = rData || [];
 
     renderProrataTable();
@@ -544,6 +500,7 @@ async function handleProrataChange(e) {
     try {
       const upsert = {
         mois: month, annee: prorataYear,
+        id: db.id, // Will be used by /api/action for PATCH if exists
         nombre_jours_reserves: joursOcc,
         nombre_jours_dans_le_mois: joursMois,
         total_facture_electricite: parseFloat(totElec) || 0,
@@ -553,24 +510,12 @@ async function handleProrataChange(e) {
         updated_at: new Date().toISOString()
       };
 
-      if (db.id) {
-        const { error } = await sb.from('prorata_charges').update(upsert).eq('id', db.id);
-        if (error) throw error;
-      } else {
-        // Check if record already exists for this month+year to prevent duplicates
-        const { data: existing } = await sb.from('prorata_charges')
-          .select('id').eq('mois', month).eq('annee', prorataYear).maybeSingle();
-        if (existing) {
-          const { error } = await sb.from('prorata_charges').update(upsert).eq('id', existing.id);
-          if (error) throw error;
-          prorataCache[month] = { id: existing.id, ...upsert };
-        } else {
-          const { data, error } = await sb.from('prorata_charges').insert(upsert).select().single();
-          if (error) throw error;
-          if (data) prorataCache[month] = data;
-        }
-      }
-      prorataCache[month] = { ...prorataCache[month], ...upsert };
+      const result = await api('/api/action', {
+        method: 'POST',
+        body: { action: 'upsert_prorata', payload: upsert }
+      });
+
+      prorataCache[month] = result;
       showToast('Enregistré');
     } catch (err) {
       console.error(err);
@@ -593,13 +538,32 @@ async function loadMenageReservations() {
   const c = $('#menageReservationsList');
   c.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
   try {
-    const { data, error } = await sb.from('reservation').select('*').order('date_heure_menage', { ascending: false });
-    if (error) throw error;
-    renderReservations(data || [], c);
+    const data = await api(`/api/data?type=reservations_menage&userId=${currentUser.id}`);
+    renderMenageJobs(data || [], c);
   } catch (err) {
     console.error(err);
     c.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Erreur de chargement</p></div>';
   }
+}
+
+function renderMenageJobs(list, container) {
+  if (!list.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><p>Aucune mission</p></div>';
+    return;
+  }
+  container.innerHTML = list.map((job, i) => {
+    const r = job.reservation;
+    const up = isUpcoming(r.date_heure_menage);
+    return `
+      <div class="reservation-card card-animate" style="animation-delay:${i * .05}s" onclick="location.href='/job?id=${job.id}'">
+        <span class="card-badge ${up ? 'upcoming' : 'past'}">${up ? 'À venir' : 'Passée'}</span>
+        <div class="card-title">🧹 Mission ${job.job_name}</div>
+        <div class="card-info">
+          <div class="card-info-row"><span class="label">Date sortie</span><span class="value">${formatDateTime(r.date_heure_menage)}</span></div>
+          <div class="card-info-row"><span class="label">Statut</span><span class="value">${job.statut_job}</span></div>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // ==========================================================
@@ -671,10 +635,10 @@ function initNotifPrompt() {
     // Marquer comme activé en base de données pour ce compte
     if (currentUser) {
       try {
-        await sb.from('users').update({ notif_active: true }).eq('id', currentUser.id);
+        await api('/api/auth', { method: 'POST', body: { action: 'update_notif', userId: currentUser.id, status: true } });
         currentUser.notif_active = true;
         localStorage.setItem('gm_user', JSON.stringify(currentUser));
-        console.log("GM: Updated notif_active in Supabase");
+        console.log("GM: Updated notif_active in Supabase via API");
       } catch (err) {
         console.error("GM: Error updating notif_active:", err);
       }
@@ -744,6 +708,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('OneSignalSDKWorker.js').catch(e => console.log('SW fail:', e));
+    navigator.serviceWorker.register('OneSignalSDKWorker.js').then(reg => {
+      // Check for updates periodically
+      reg.onupdatefound = () => {
+        const installingWorker = reg.installing;
+        if (installingWorker) {
+          installingWorker.onstatechange = () => {
+            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // New content is available; please refresh.
+              showToast('Mise à jour disponible. Redémarrage...', 'info');
+              setTimeout(() => location.reload(), 2000);
+            }
+          };
+        }
+      };
+    }).catch(e => console.log('SW fail:', e));
   });
 }

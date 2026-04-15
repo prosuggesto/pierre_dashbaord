@@ -2,10 +2,17 @@
    JOB VALIDATION — GESTION MENAGE
    ========================================================== */
 
-// 1. SUPABASE CLIENT
-const SUPABASE_URL = 'https://hgqndkfkuitafuzawuxl.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhncW5ka2ZrdWl0YWZ1emF3dXhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5MzQ4OTIsImV4cCI6MjA2MzUxMDg5Mn0.Yixc4Pw9w3NDtxx5WTuU1YAtbN5gh60a6WQzGKKOFjY';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// 1. SERVICES
+async function api(path, options = {}) {
+  const resp = await fetch(path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.message || data.error || 'API Error');
+  return data;
+}
 
 // 2. UTILS
 const $ = (s) => document.querySelector(s);
@@ -41,7 +48,7 @@ async function initJob() {
 
   // Optionally fetch job details if needed for status check
   try {
-    const { data, error } = await sb.from('jobs').select('*').eq('id', jobId).maybeSingle();
+    const data = await api(`/api/data?type=job_details&jobId=${jobId}`);
     if (data) {
       if (data.statut_job === 'notifié') {
          showSuccessState(); // Already validated
@@ -59,20 +66,14 @@ async function validateJob() {
 
   try {
     // 1. Get current data to increment correctly
-    const { data: current, error: getErr } = await sb.from('jobs').select('quantite_job_active').eq('id', jobId).single();
-    if (getErr) throw getErr;
-
+    const current = await api(`/api/data?type=job_details&jobId=${jobId}`);
     const nextQty = (current.quantite_job_active || 0) + 1;
 
-    // 2. Perform Update
-    const { error: updErr } = await sb.from('jobs')
-      .update({ 
-        statut_job: 'notifié',
-        quantite_job_active: nextQty
-      })
-      .eq('id', jobId);
-
-    if (updErr) throw updErr;
+    // 2. Perform Update via secure API
+    await api('/api/validate', {
+      method: 'POST',
+      body: { jobId, nextQty }
+    });
 
     showSuccessState();
   } catch (err) {
