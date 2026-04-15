@@ -682,7 +682,13 @@ function initNotifPrompt() {
 
     if (window.OneSignal && window.OneSignal.Notifications) {
       console.log("GM: Triggering direct requestPermission");
-      window.OneSignal.Notifications.requestPermission();
+      window.OneSignal.Notifications.requestPermission().then(permission => {
+        console.log("GM: Permission result:", permission);
+        if (permission === 'granted' && currentUser) {
+          console.log("GM: Permission granted! Forcing re-sync for this device.");
+          window.OneSignal.login(currentUser.id);
+        }
+      });
     } else {
       console.log("GM: OneSignal not ready, using Deferred push");
       window.OneSignalDeferred = window.OneSignalDeferred || [];
