@@ -29,14 +29,22 @@ const MONTH_NAMES = [
 
 function formatDate(d) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
+  const date = new Date(d);
+  const day = date.getUTCDate();
+  const month = MONTH_NAMES[date.getUTCMonth()];
+  const year = date.getUTCFullYear();
+  return `${day} ${month} ${year}`;
 }
 
 function formatDateTime(d) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('fr-FR', {
-    day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit'
-  });
+  const date = new Date(d);
+  const day = date.getUTCDate();
+  const month = MONTH_NAMES[date.getUTCMonth()];
+  const year = date.getUTCFullYear();
+  const hours = String(date.getUTCHours()).padStart(2, '0');
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+  return `${day} ${month} ${year} à ${hours}:${minutes}`;
 }
 
 function isUpcoming(d) { return d ? new Date(d) > new Date() : false; }
