@@ -1,3 +1,5 @@
+importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
+
 const CACHE_NAME = 'gestion-menage-v1';
 const STATIC_ASSETS = [
   '/',
@@ -60,4 +62,28 @@ self.addEventListener('fetch', (event) => {
         });
     })
   );
+});
+
+// PWA DEEP LINKING: Handle notification click
+self.addEventListener('notificationclick', (event) => {
+  const notification = event.notification;
+  const targetUrl = notification.data && notification.data.url;
+
+  if (targetUrl) {
+    event.notification.close();
+    event.waitUntil(
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+        // Si une fenêtre est déjà ouverte sur cette URL, on lui donne le focus
+        for (const client of windowClients) {
+          if (client.url === targetUrl && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // Sinon on ouvre une nouvelle fenêtre dans la PWA
+        if (clients.openWindow) {
+          return clients.openWindow(targetUrl);
+        }
+      })
+    );
+  }
 });
