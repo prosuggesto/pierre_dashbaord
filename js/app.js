@@ -707,17 +707,30 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 if ('serviceWorker' in navigator) {
+  let refreshing = false;
+  
+  // Événement déclenché quand le nouveau SW prend le contrôle
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    showToast('Application mise à jour ! Redémarrage...', 'info');
+    setTimeout(() => window.location.reload(), 1500);
+  });
+
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('OneSignalSDKWorker.js').then(reg => {
-      // Check for updates periodically
+      // Si un SW est déjà en attente (post-installation), on le force à s'activer
+      if (reg.waiting) {
+        reg.waiting.postMessage({ action: 'skipWaiting' });
+      }
+
       reg.onupdatefound = () => {
         const installingWorker = reg.installing;
         if (installingWorker) {
           installingWorker.onstatechange = () => {
             if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // New content is available; please refresh.
-              showToast('Mise à jour disponible. Redémarrage...', 'info');
-              setTimeout(() => location.reload(), 2000);
+              // Nouveau SW prêt : on lui demande de prendre le contrôle
+              reg.waiting?.postMessage({ action: 'skipWaiting' });
             }
           };
         }
