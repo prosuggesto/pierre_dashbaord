@@ -108,6 +108,10 @@ async function register(code) {
     if (error) throw error;
     currentUser = data;
     localStorage.setItem('gm_user', JSON.stringify(data));
+
+    // Rattrapage: créer les jobs pour toutes les réservations futures
+    await catchUpJobsForNewUser(data.id);
+
     showAuthSuccess('Compte créé !');
     setTimeout(() => navigateToView('menage'), 600);
   } catch (err) {
@@ -264,6 +268,31 @@ async function createJobsForReservation() {
     if (jErr) throw jErr;
   } catch (err) {
     console.error('Jobs error:', err);
+  }
+}
+
+async function catchUpJobsForNewUser(userId) {
+  try {
+    // Récupérer toutes les réservations futures
+    const { data: futureRes, error } = await sb.from('reservation')
+      .select('*')
+      .gt('date_heure_menage', new Date().toISOString());
+    if (error) throw error;
+    if (!futureRes || !futureRes.length) return;
+
+    const names = ['j-2', 'j-1', 'h-5', 'h-1'];
+    const jobs = [];
+    futureRes.forEach(() => {
+      names.forEach(n => {
+        jobs.push({ id_cleaner: userId, job_name: n, statut_job: 'en_attente', quantite_job_active: 0 });
+      });
+    });
+
+    const { error: jErr } = await sb.from('jobs').insert(jobs);
+    if (jErr) throw jErr;
+    console.log(`Rattrapage: ${jobs.length} jobs créés pour ${futureRes.length} réservation(s) future(s)`);
+  } catch (err) {
+    console.error('Catch-up jobs error:', err);
   }
 }
 
