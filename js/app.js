@@ -655,10 +655,19 @@ function initNotifPrompt() {
   $('#notifBackdrop').addEventListener('click', () => modal.classList.remove('active'));
 
   btnSubscribe.addEventListener('click', () => {
+    console.log("GM: Notif Subscribe clicked");
     modal.classList.remove('active');
-    window.OneSignalDeferred.push(function(OneSignal) {
-      OneSignal.Notifications.requestPermission();
-    });
+    
+    if (window.OneSignal && window.OneSignal.Notifications) {
+      console.log("GM: Triggering direct requestPermission");
+      window.OneSignal.Notifications.requestPermission();
+    } else {
+      console.log("GM: OneSignal not ready, using Deferred push");
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(function(OneSignal) {
+        OneSignal.Notifications.requestPermission();
+      });
+    }
   });
 }
 
@@ -666,12 +675,19 @@ function checkAndShowNotifPrompt() {
   const modal = $('#notifModal');
   if (!modal || !currentUser) return;
 
+  console.log("GM: Checking notif status for user", currentUser.id);
+
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   window.OneSignalDeferred.push(function(OneSignal) {
-    // Si déjà accordé, on ne montre rien
-    if (OneSignal.Notifications.permission === 'granted') return;
+    console.log("GM: OneSignal status:", OneSignal.Notifications.permission);
     
-    // On s'assure que l'ID est bien lié avant de montrer le prompt
+    // Si déjà accordé, on ne montre rien
+    if (OneSignal.Notifications.permission === 'granted') {
+      console.log("GM: Notifications already granted");
+      return;
+    }
+    
+    // On s'assure que l'ID est bien lié
     OneSignal.login(currentUser.id);
     
     // Afficher notre modal personnalisé
