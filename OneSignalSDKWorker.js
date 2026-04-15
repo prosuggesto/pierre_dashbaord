@@ -65,6 +65,13 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// Listener pour forcer l'activation immédiate via un message
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.action === 'skipWaiting') {
+    self.skipWaiting();
+  }
+});
+
 // PWA DEEP LINKING: Handle notification click
 self.addEventListener('notificationclick', (event) => {
   const notification = event.notification;

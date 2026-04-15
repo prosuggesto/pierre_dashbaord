@@ -718,21 +718,75 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 if ('serviceWorker' in navigator) {
+  let refreshing = false;
+  let swRegistration = null;
+
+  // Détection du changement de contrôleur (nouveau SW actif)
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+
+  function showUpdateToast(reg) {
+    const container = $('#toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast info update-toast';
+    toast.style.display = 'flex';
+    toast.style.flexDirection = 'column';
+    toast.style.gap = '10px';
+    
+    toast.innerHTML = `
+      <div>Une mise à jour est disponible !</div>
+      <button class="btn btn-primary btn-sm" style="font-size: 0.75rem; padding: 6px;">Relancer pour mettre à jour</button>
+    `;
+    
+    toast.querySelector('button').onclick = () => {
+      if (reg.waiting) {
+        reg.waiting.postMessage({ action: 'skipWaiting' });
+      }
+    };
+    
+    container.appendChild(toast);
+  }
+
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('OneSignalSDKWorker.js').then(reg => {
-      console.log("SW Registered");
-      
-      // On vérifie s'il y a une mise à jour silencieusement
+      swRegistration = reg;
+      console.log("GM: SW Registered");
+
+      // Si un SW attend déjà (ex: maj téléchargée lors d'une session précédente)
+      if (reg.waiting) {
+        showUpdateToast(reg);
+      }
+
       reg.onupdatefound = () => {
         const installingWorker = reg.installing;
-        if (installingWorker) {
-          installingWorker.onstatechange = () => {
-            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-               showToast('Mise à jour installée. Elle sera active au prochain démarrage.', 'info');
-            }
-          };
-        }
+        installingWorker.onstatechange = () => {
+          if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateToast(reg);
+          }
+        };
       };
     }).catch(e => console.log('SW fail:', e));
   });
+
+  // Liaison des boutons de mise à jour manuelle
+  function initUpdateButtons() {
+    const btns = [$('#checkUpdateBtn'), $('#checkUpdateBtnMenage')];
+    btns.forEach(btn => {
+      if (btn) {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (swRegistration) {
+            swRegistration.update();
+            showToast('Recherche de mise à jour...');
+          }
+        });
+      }
+    });
+  }
+  
+  // Appeler l'init des boutons quand le DOM est prêt
+  document.addEventListener('DOMContentLoaded', initUpdateButtons);
 }
