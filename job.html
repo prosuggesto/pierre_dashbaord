@@ -52,12 +52,14 @@
     }
     .job-detail-item {
       display: flex;
-      justify-content: space-between;
-      margin-bottom: 8px;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 12px;
+      word-break: break-all;
     }
     .job-detail-item:last-child { margin-bottom: 0; }
-    .job-detail-item .label { color: var(--g500); font-size: .85rem; }
-    .job-detail-item .value { color: var(--white); font-weight: 500; font-size: .85rem; }
+    .job-detail-item .label { color: var(--g500); font-size: .75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .job-detail-item .value { color: var(--white); font-weight: 500; font-size: .85rem; font-family: monospace; opacity: 0.9; }
 
     #validateBtn {
       min-height: 54px;
