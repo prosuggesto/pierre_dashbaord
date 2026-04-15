@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       url = `${SUPABASE_URL}/rest/v1/reservation?select=*&order=date_heure_menage.desc`;
     } 
     else if (type === 'reservations_menage' && userId) {
-      url = `${SUPABASE_URL}/rest/v1/jobs?id_cleaner=eq.${userId}&select=*,reservation(*)&order=reservation(date_heure_menage).desc`;
+      url = `${SUPABASE_URL}/rest/v1/jobs?id_cleaner=eq.${userId}&select=*,reservation(*)`;
     }
     else if (type === 'job_details' && jobId) {
       url = `${SUPABASE_URL}/rest/v1/jobs?id=eq.${jobId}&select=*,reservation(*)`;

@@ -567,14 +567,14 @@ function renderMenageJobs(list, container) {
   }
   container.classList.remove('is-empty');
   container.innerHTML = list.map((job, i) => {
-    const r = job.reservation;
+    const r = job.reservation || {};
     const up = isUpcoming(r.date_heure_menage);
     return `
       <div class="reservation-card card-animate" style="animation-delay:${i * .05}s" onclick="location.href='/job?id=${job.id}'">
         <span class="card-badge ${up ? 'upcoming' : 'past'}">${up ? 'À venir' : 'Passée'}</span>
         <div class="card-title">🧹 Mission ${job.job_name}</div>
         <div class="card-info">
-          <div class="card-info-row"><span class="label">Date sortie</span><span class="value">${formatDateTime(r.date_heure_menage)}</span></div>
+          <div class="card-info-row"><span class="label">Date sortie</span><span class="value">${r.date_heure_menage ? formatDateTime(r.date_heure_menage) : 'Non planifiée'}</span></div>
           <div class="card-info-row"><span class="label">Statut</span><span class="value">${job.statut_job}</span></div>
         </div>
       </div>`;
