@@ -23,8 +23,9 @@ export default async function handler(req, res) {
       url = `${SUPABASE_URL}/rest/v1/reservation?select=*&order=date_heure_menage.desc`;
     } 
     else if (type === 'reservations_menage') {
-      // Pour le ménage, on récupère tout par défaut pour être sûr qu'ils voient les réservations à venir
-      url = `${SUPABASE_URL}/rest/v1/reservation?select=*&order=date_heure_menage.desc`;
+      // Pour le ménage, on ne récupère que les réservations à venir (futures)
+      const now = new Date().toISOString();
+      url = `${SUPABASE_URL}/rest/v1/reservation?date_heure_menage=gte.${now}&select=*&order=date_heure_menage.asc`;
     }
     else if (type === 'job_details' && jobId) {
       url = `${SUPABASE_URL}/rest/v1/jobs?id=eq.${jobId}&select=*,reservation(*)`;
