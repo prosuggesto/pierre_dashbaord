@@ -687,7 +687,13 @@ function checkAndShowNotifPrompt() {
   const modal = $('#notifModal');
   if (!modal || !currentUser) return;
 
-  // Si on a déjà marqué l'utilisateur comme ayant activé les notifs, on ne montre rien
+  // VERIFICATION NATIVE : Si le navigateur dit déjà OK, on s'arrête là tout de suite
+  if (window.Notification && Notification.permission === 'granted') {
+    console.log("GM: Browser native permission already granted. Skipping prompt.");
+    return;
+  }
+
+  // Si on a déjà marqué l'utilisateur comme ayant activé les notifs dans la DB, on s'arrête aussi
   if (currentUser.notif_active === true) {
     console.log("GM: Notifications already active in database profile");
     return;
