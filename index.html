@@ -22,9 +22,11 @@
     OneSignalDeferred.push(async function(OneSignal) {
       await OneSignal.init({
         appId: "37d34485-d10f-4de5-9b81-656320607c75",
+        allowLocalhostAsSecureOrigin: true,
         promptOptions: {
           slidedown: {
-            enabled: false
+            enabled: false,
+            prompts: []
           }
         }
       });
