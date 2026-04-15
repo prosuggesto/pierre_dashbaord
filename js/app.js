@@ -720,28 +720,34 @@ document.addEventListener('DOMContentLoaded', () => {
 if ('serviceWorker' in navigator) {
   let swRegistration = null;
 
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('OneSignalSDKWorker.js').then(reg => {
-      swRegistration = reg;
-      console.log("GM: SW Registered (Manual Mode)");
-    }).catch(e => console.log('SW fail:', e));
-  });
-
   async function forceAppUpdate() {
-    console.log("GM: Forcing update...");
     if (swRegistration) {
       await swRegistration.update();
       if (swRegistration.waiting) {
         swRegistration.waiting.postMessage({ action: 'skipWaiting' });
       }
     }
-    // Petit délai pour laisser le temps au SW de switcher
     setTimeout(() => {
+      localStorage.setItem('last_auto_update', Date.now());
       window.location.reload();
     }, 500);
   }
 
-  // Liaison du bouton de mise à jour flottant
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('OneSignalSDKWorker.js').then(reg => {
+      swRegistration = reg;
+      if (reg.waiting) {
+        const lastUpd = localStorage.getItem('last_auto_update');
+        const now = Date.now();
+        if (!lastUpd || (now - lastUpd > 30000)) {
+          forceAppUpdate();
+        }
+      } else {
+        reg.update();
+      }
+    }).catch(e => console.log('SW fail:', e));
+  });
+
   function initUpdateButtons() {
     const btn = $('#checkUpdateBtnGlobal');
     if (btn) {
@@ -752,21 +758,8 @@ if ('serviceWorker' in navigator) {
       };
     }
   }
-
-  // Vérification quotidienne à 00:00
-  function scheduleDailyUpdate() {
-    setInterval(() => {
-      const now = new Date();
-      // On vérifie si on est entre 00:00 et 00:01
-      if (now.getHours() === 0 && now.getMinutes() === 0) {
-        console.log("GM: Scheduled midnight update triggered");
-        forceAppUpdate();
-      }
-    }, 60000); // On vérifie toutes les minutes
-  }
   
   document.addEventListener('DOMContentLoaded', () => {
     initUpdateButtons();
-    scheduleDailyUpdate();
   });
 }
