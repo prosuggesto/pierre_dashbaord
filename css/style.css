@@ -689,26 +689,24 @@ input[type=number]{-moz-appearance:textfield}
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  min-height: 60vh;
 }
 
-.menage-empty-state {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+.app-empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  pointer-events: none; /* Pour ne pas bloquer les clics en dessous si besoin */
+  pointer-events: none;
 }
-.menage-empty-icon {
+.app-empty-icon {
   font-size: 3rem;
   margin-bottom: 12px;
   opacity: 0.4;
 }
-.menage-empty-text {
+.app-empty-text {
   font-size: 1rem;
   color: var(--g500);
 }

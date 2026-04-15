@@ -197,9 +197,15 @@ async function loadPierreReservations() {
 
 function renderReservations(list, container) {
   if (!list.length) {
-    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><p>Aucune réservation</p></div>';
+    container.classList.add('is-empty');
+    container.innerHTML = `
+      <div class="app-empty-state">
+        <div class="app-empty-icon">📅</div>
+        <div class="app-empty-text">Aucune réservation</div>
+      </div>`;
     return;
   }
+  container.classList.remove('is-empty');
   container.innerHTML = list.map((r, i) => {
     const up = isUpcoming(r.date_heure_menage);
     return `
@@ -553,9 +559,9 @@ function renderMenageJobs(list, container) {
   if (!list.length) {
     container.classList.add('is-empty');
     container.innerHTML = `
-      <div class="menage-empty-state">
-        <div class="menage-empty-icon">📅</div>
-        <div class="menage-empty-text">Aucune réservation</div>
+      <div class="app-empty-state">
+        <div class="app-empty-icon">📅</div>
+        <div class="app-empty-text">Aucune réservation</div>
       </div>`;
     return;
   }
