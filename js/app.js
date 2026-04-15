@@ -637,7 +637,44 @@ function switchSection(name) {
 }
 
 // ==========================================================
-// 10. INIT
+// 10. NOTIFICATION PROMPT
+// ==========================================================
+function initNotifPrompt() {
+  const modal = $('#notifModal');
+  const btnLater = $('#notifLater');
+  const btnSubscribe = $('#notifSubscribe');
+
+  if (!modal) return;
+
+  const showPrompt = () => {
+    // Ne pas afficher si déjà abonné ou si refusé récemment (optionnel, OneSignal gère un peu ça)
+    modal.classList.add('active');
+  };
+
+  // Afficher après 2 secondes pour ne pas agresser au chargement
+  setTimeout(() => {
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(function(OneSignal) {
+      // Si l'utilisateur n'est pas encore abonné, on montre notre modal
+      if (OneSignal.Notifications.permission !== 'granted') {
+        showPrompt();
+      }
+    });
+  }, 2000);
+
+  btnLater.addEventListener('click', () => modal.classList.remove('active'));
+  $('#notifBackdrop').addEventListener('click', () => modal.classList.remove('active'));
+
+  btnSubscribe.addEventListener('click', () => {
+    modal.classList.remove('active');
+    window.OneSignalDeferred.push(function(OneSignal) {
+      OneSignal.Notifications.requestPermission();
+    });
+  });
+}
+
+// ==========================================================
+// 11. INIT
 // ==========================================================
 document.addEventListener('DOMContentLoaded', () => {
   initAuth();
@@ -645,6 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initReservationModal();
   initTimePicker();
   initProrataNav();
+  initNotifPrompt();
   if (!checkSession()) showView('auth');
 });
 

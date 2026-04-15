@@ -18,10 +18,14 @@
   <!-- OneSignal SDK -->
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
   <script>
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
     OneSignalDeferred.push(async function(OneSignal) {
       await OneSignal.init({
         appId: "37d34485-d10f-4de5-9b81-656320607c75",
+        promptOptions: {
+          slidedown: {
+            enabled: false
+          }
+        }
       });
     });
   </script>
@@ -223,6 +227,24 @@
 
   <!-- Toast container -->
   <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Notification Prompt Modal -->
+  <div id="notifModal" class="modal notif-modal-wrapper">
+    <div class="modal-backdrop" id="notifBackdrop"></div>
+    <div class="modal-content notif-content">
+      <div class="notif-header">
+        <div class="notif-icon-box">
+          <span class="notif-bell">🔔</span>
+        </div>
+      </div>
+      <h3>Restez informé</h3>
+      <p>Recevez les notifications en temps réel pour vos réservations et les missions de ménage.</p>
+      <div class="notif-actions">
+        <button class="btn btn-ghost btn-full" id="notifLater">Plus tard</button>
+        <button class="btn btn-primary btn-full" id="notifSubscribe">Activer</button>
+      </div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="js/app.js"></script>

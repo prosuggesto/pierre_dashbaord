@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Validation Mission — Gestion Ménage</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .job-card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-xl);
+      padding: 40px 32px;
+      text-align: center;
+      animation: fadeInUp .5s var(--ease) forwards;
+    }
+    .job-status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: var(--r-full);
+      font-size: .75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      background: var(--teal-dim);
+      color: var(--teal);
+      border: 1px solid rgba(0, 212, 170, 0.2);
+    }
+    .job-card h1 {
+      font-size: 1.6rem;
+      margin-bottom: 12px;
+    }
+    .job-card p {
+      color: var(--g300);
+      font-size: .95rem;
+      margin-bottom: 32px;
+    }
+    .job-details {
+      background: rgba(255,255,255,0.03);
+      border-radius: var(--r-md);
+      padding: 20px;
+      margin-bottom: 32px;
+      text-align: left;
+    }
+    .job-detail-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .job-detail-item:last-child { margin-bottom: 0; }
+    .job-detail-item .label { color: var(--g500); font-size: .85rem; }
+    .job-detail-item .value { color: var(--white); font-weight: 500; font-size: .85rem; }
+
+    #validateBtn {
+      min-height: 54px;
+      font-size: 1rem;
+    }
+    .success-view { display: none; }
+    .success-view.active { display: block; }
+    .main-view.hidden { display: none; }
+
+    .success-icon {
+      font-size: 3.5rem;
+      margin-bottom: 20px;
+      color: var(--teal);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="job-card">
+    <div id="mainView" class="main-view">
+      <div class="job-status-badge" id="jobBadge">Ménage en attente</div>
+      <h1 id="jobTitle">Mission de Ménage</h1>
+      <p id="jobSubtitle">Veuillez valider votre passage pour confirmer la mission.</p>
+      
+      <div id="jobDetails" class="job-details" style="display:none">
+        <div class="job-detail-item">
+          <span class="label">ID Mission</span>
+          <span class="value" id="dispId">#123</span>
+        </div>
+        <div class="job-detail-item">
+          <span class="label">Type</span>
+          <span class="value" id="dispType">Ménage</span>
+        </div>
+      </div>
+
+      <button id="validateBtn" class="btn btn-primary btn-full">
+        Valider ma prestation
+      </button>
+      <div id="errorMessage" class="auth-message error" style="display:none; margin-top: 15px;"></div>
+    </div>
+
+    <div id="successView" class="success-view">
+      <div class="success-icon">✅</div>
+      <h1>Prestation validée !</h1>
+      <p>Merci pour votre travail. Le statut a été mis à jour et Pierre a été prévenu.</p>
+      <a href="index.html" class="btn btn-ghost btn-full">Retour à l'accueil</a>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/job.js"></script>
+</body>
+</html>
