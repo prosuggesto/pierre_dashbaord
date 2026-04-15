@@ -22,8 +22,9 @@ export default async function handler(req, res) {
     if (type === 'reservations_pierre') {
       url = `${SUPABASE_URL}/rest/v1/reservation?select=*&order=date_heure_menage.desc`;
     } 
-    else if (type === 'reservations_menage' && userId) {
-      url = `${SUPABASE_URL}/rest/v1/jobs?id_cleaner=eq.${userId}&select=*,reservation(*)`;
+    else if (type === 'reservations_menage') {
+      // Pour le ménage, on récupère tout par défaut pour être sûr qu'ils voient les réservations à venir
+      url = `${SUPABASE_URL}/rest/v1/reservation?select=*&order=date_heure_menage.desc`;
     }
     else if (type === 'job_details' && jobId) {
       url = `${SUPABASE_URL}/rest/v1/jobs?id=eq.${jobId}&select=*,reservation(*)`;

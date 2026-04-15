@@ -566,16 +566,19 @@ function renderMenageJobs(list, container) {
     return;
   }
   container.classList.remove('is-empty');
-  container.innerHTML = list.map((job, i) => {
-    const r = job.reservation || {};
+  container.innerHTML = list.map((r, i) => {
     const up = isUpcoming(r.date_heure_menage);
+    // On simule une "Mission" si ce n'est pas un objet Job complet
+    const title = r.job_name ? `Mission ${r.job_name}` : `Mission Réservation #${r.id}`;
+    const status = r.statut_job || 'À faire';
+
     return `
-      <div class="reservation-card card-animate" style="animation-delay:${i * .05}s" onclick="location.href='/job?id=${job.id}'">
+      <div class="reservation-card card-animate" style="animation-delay:${i * .05}s" onclick="location.href='/job?id=${r.id}'">
         <span class="card-badge ${up ? 'upcoming' : 'past'}">${up ? 'À venir' : 'Passée'}</span>
-        <div class="card-title">🧹 Mission ${job.job_name}</div>
+        <div class="card-title">🧹 ${title}</div>
         <div class="card-info">
           <div class="card-info-row"><span class="label">Date sortie</span><span class="value">${r.date_heure_menage ? formatDateTime(r.date_heure_menage) : 'Non planifiée'}</span></div>
-          <div class="card-info-row"><span class="label">Statut</span><span class="value">${job.statut_job}</span></div>
+          <div class="card-info-row"><span class="label">Statut</span><span class="value">${status}</span></div>
         </div>
       </div>`;
   }).join('');
