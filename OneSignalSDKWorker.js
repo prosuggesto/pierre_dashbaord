@@ -1,6 +1,6 @@
 importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
-const APP_VERSION = '1.0.1'; // Change this to force update
+const APP_VERSION = '1.0.2'; // Change this to force update
 const CACHE_NAME = 'gestion-menage-' + APP_VERSION;
 const STATIC_ASSETS = [
   '/',
@@ -37,9 +37,16 @@ self.addEventListener('activate', (event) => {
 // Fetch: network-first for API, cache-first for static
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  const url = new URL(request.url);
 
-  // Skip Supabase API calls - always go to network
-  if (request.url.includes('supabase.co')) {
+  // Bypasser COMPLÈTEMENT tout ce qui n'est pas sur notre propre domaine
+  // Cela empêche de casser OneSignal (qui fait des appels à onesignal.com) et Supabase
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // Ne pas cacher nos propres routes /api/ dynamiques
+  if (url.pathname.startsWith('/api/')) {
     return;
   }
 
