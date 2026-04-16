@@ -646,36 +646,46 @@ function initNotifPrompt() {
   btnLater.addEventListener('click', () => modal.classList.remove('active'));
   $('#notifBackdrop').addEventListener('click', () => modal.classList.remove('active'));
 
-  btnSubscribe.addEventListener('click', async () => {
+  btnSubscribe.addEventListener('click', () => {
     console.log("GM: Notif Subscribe clicked");
     modal.classList.remove('active');
 
-    // Marquer comme activé en base de données pour ce compte
-    if (currentUser) {
-      try {
-        await api('/api/auth', { method: 'POST', body: { action: 'update_notif', userId: currentUser.id, status: true } });
-        currentUser.notif_active = true;
-        localStorage.setItem('gm_user', JSON.stringify(currentUser));
-        console.log("GM: Updated notif_active in Supabase via API");
-      } catch (err) {
-        console.error("GM: Error updating notif_active:", err);
+    // Mémoriser la fonction de rattachement API
+    const syncUserToDb = () => {
+      // Marquer comme activé en base de données pour ce compte
+      if (currentUser) {
+        api('/api/auth', { method: 'POST', body: { action: 'update_notif', userId: currentUser.id, status: true } })
+        .then(() => {
+          currentUser.notif_active = true;
+          localStorage.setItem('gm_user', JSON.stringify(currentUser));
+          console.log("GM: Updated notif_active in Supabase via API");
+        }).catch(err => console.error("GM: Error updating notif_active:", err));
       }
-    }
+    };
 
     if (window.OneSignal && window.OneSignal.Notifications) {
-      console.log("GM: Triggering direct requestPermission");
+      console.log("GM: Triggering direct requestPermission (synchronously !)");
+      // LA DEMANDE NATIVE DOIT ÊTRE LA PREMIÈRE CHOSE EFFECTUÉE APRÈS LE CLIC (pas de 'await' avant)
       window.OneSignal.Notifications.requestPermission().then(permission => {
         console.log("GM: Permission result:", permission);
-        if (permission === 'granted' && currentUser) {
-          console.log("GM: Permission granted! Forcing re-sync for this device.");
-          window.OneSignal.login(currentUser.id);
+        
+        // Parfois sur mobile, la permission est silencieusement bloquée (denied)
+        if (Notification && Notification.permission === 'denied') {
+           showToast("Notifications bloquées par votre navigateur. Activez-les dans vos paramètres.", "error");
+        } 
+        else if (permission === true || permission === 'granted' || (Notification && Notification.permission === 'granted')) {
+          if (currentUser) {
+            console.log("GM: Permission granted! Forcing re-sync for this device.");
+            window.OneSignal.login(currentUser.id);
+            syncUserToDb();
+          }
         }
       });
     } else {
       console.log("GM: OneSignal not ready, using Deferred push");
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       window.OneSignalDeferred.push(function (OneSignal) {
-        OneSignal.Notifications.requestPermission();
+        OneSignal.Notifications.requestPermission().then(() => syncUserToDb());
       });
     }
   });
