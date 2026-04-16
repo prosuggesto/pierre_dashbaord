@@ -751,7 +751,7 @@ if ('serviceWorker' in navigator) {
   }
 
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('OneSignalSDKWorker.js').then(reg => {
+    navigator.serviceWorker.register('/OneSignalSDKWorker.js', { scope: '/' }).then(reg => {
       swRegistration = reg;
       if (reg.waiting) {
         const lastUpd = localStorage.getItem('last_auto_update');
