@@ -28,7 +28,7 @@ export default async function handler(req, res) {
       url = `${SUPABASE_URL}/rest/v1/reservation?date_heure_menage=gte.${now}&select=*&order=date_heure_menage.asc`;
     }
     else if (type === 'job_details' && jobId) {
-      url = `${SUPABASE_URL}/rest/v1/jobs?id=eq.${jobId}&select=*,reservation(*)`;
+      url = `${SUPABASE_URL}/rest/v1/jobs?id=eq.${jobId}&select=*`;
     }
     else if (type === 'prorata' && req.query.year) {
       url = `${SUPABASE_URL}/rest/v1/prorata_charges?annee=eq.${req.query.year}&select=*`;
