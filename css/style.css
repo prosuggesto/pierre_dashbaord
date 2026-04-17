@@ -636,6 +636,41 @@ input[type=number]{-moz-appearance:textfield}
 }
 
 /* ============================================
+   DELETE MODAL (Liquid Glass)
+   ============================================ */
+.delete-modal-wrapper .delete-glass-content {
+  max-width: 340px;
+  padding: 32px 24px;
+  text-align: center;
+  background: rgba(20, 20, 20, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  border-radius: var(--r-xl);
+}
+
+.delete-icon-box {
+  width: 56px;
+  height: 56px;
+  background: rgba(255, 77, 106, 0.15);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 77, 106, 0.3);
+  margin: 0 auto 16px;
+  font-size: 1.5rem;
+  color: var(--error);
+}
+
+.delete-glass-content h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+/* ============================================
    RESPONSIVE
    ============================================ */
 @media(max-width:768px){
@@ -655,7 +690,6 @@ input[type=number]{-moz-appearance:textfield}
   .menage-content{padding:20px 14px}
   .toast-container{bottom:14px;right:14px;left:14px}
   .toast{max-width:none}
-  #pierre-view .app-empty-state { left: 50%; }
 }
 
 @media(max-width:480px){
@@ -687,22 +721,22 @@ input[type=number]{-moz-appearance:textfield}
 }
 
 .cards-container.is-empty {
-  min-height: 100px;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  grid-column: 1 / -1;
 }
 
 .app-empty-state {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
   pointer-events: none;
-  z-index: 80;
-  width: 100%;
 }
 .app-empty-icon {
   font-size: 3rem;
@@ -712,10 +746,6 @@ input[type=number]{-moz-appearance:textfield}
 .app-empty-text {
   font-size: 1rem;
   color: var(--g500);
-}
-
-#pierre-view .app-empty-state {
-  left: calc(50% + (var(--sidebar-w) / 2));
 }
 
 /* Floating Update Button */

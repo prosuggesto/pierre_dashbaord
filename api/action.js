@@ -70,7 +70,7 @@ export default async function handler(req, res) {
 
     if (action === 'delete_reservation') {
       const { id, date_heure_iso } = payload;
-      await fetch(`${SUPABASE_URL}/rest/v1/jobs?date_heure_menage=eq.${date_heure_iso}`, { method: 'DELETE', headers });
+      await fetch(`${SUPABASE_URL}/rest/v1/jobs?date_heure_menage=eq.${encodeURIComponent(date_heure_iso)}`, { method: 'DELETE', headers });
       await fetch(`${SUPABASE_URL}/rest/v1/reservation?id=eq.${id}`, { method: 'DELETE', headers });
       return res.status(200).json({ success: true });
     }

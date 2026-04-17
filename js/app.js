@@ -210,39 +210,57 @@ function renderReservations(list, container) {
     const up = isUpcoming(r.date_heure_menage);
     return `
       <div class="reservation-card card-animate" style="animation-delay:${i * .05}s">
-        <span class="card-badge ${up ? 'upcoming' : 'past'}">${up ? 'À venir' : 'Passée'}</span>
-        <div class="card-title">📅 Réservation #${r.id}</div>
+        <div style="position:absolute; top:14px; right:14px; display:flex; align-items:center; gap:8px;">
+          <button class="btn-icon delete-res-btn" data-id="${r.id}" data-date="${r.date_heure_menage}" title="Supprimer" style="width:28px; height:28px; font-size:0.85rem; background:rgba(255,77,106,.1); color:var(--error); border:1px solid rgba(255,77,106,.3); padding:0; display:flex; align-items:center; justify-content:center; transition:all .2s; border-radius:var(--r-sm);">🗑</button>
+          <span class="card-badge ${up ? 'upcoming' : 'past'}" style="position:relative; top:auto; right:auto;">${up ? 'À venir' : 'Passée'}</span>
+        </div>
+        <div class="card-title" style="padding-right:110px;">📅 Réservation #${r.id}</div>
         <div class="card-info">
           <div class="card-info-row"><span class="label">Nombre de jours</span><span class="value">${r.nombre_jours_reserves} jour${r.nombre_jours_reserves > 1 ? 's' : ''}</span></div>
           <div class="card-info-row"><span class="label">Sortie prévue</span><span class="value">${formatDateTime(r.date_heure_menage)}</span></div>
           <div class="card-info-row"><span class="label">Créée le</span><span class="value">${formatDate(r.created_at)}</span></div>
         </div>
-        <button class="btn-icon delete-res-btn" data-id="${r.id}" data-date="${r.date_heure_menage}" title="Supprimer" style="position:absolute; bottom:14px; right:14px; width:32px; height:32px; background:rgba(255,77,106,.1); color:var(--error); border-color:rgba(255,77,106,.3); transition:all .2s;">🗑</button>
       </div>`;
   }).join('');
 
   container.querySelectorAll('.delete-res-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
+    btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const id = btn.dataset.id;
       const dateIso = btn.dataset.date;
-      if (confirm('Voulez-vous vraiment supprimer cette réservation ? Ses emplois de ménage associés seront également supprimés définitivement.')) {
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
+      
+      const modal = document.querySelector('#deleteConfirmModal');
+      const confirmBtn = document.querySelector('#deleteConfirmBtn');
+      const cancelBtn = document.querySelector('#deleteCancel');
+      
+      const closeModal = () => modal.classList.remove('active');
+      
+      cancelBtn.onclick = closeModal;
+      document.querySelector('#deleteBackdrop').onclick = closeModal;
+      
+      confirmBtn.onclick = async () => {
+        confirmBtn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;margin:auto;"></div>';
+        confirmBtn.disabled = true;
+        
         try {
           await api('/api/action', {
             method: 'POST',
             body: { action: 'delete_reservation', payload: { id, date_heure_iso: dateIso } }
           });
           showToast('Réservation supprimée');
+          closeModal();
           loadPierreReservations();
         } catch (err) {
           console.error(err);
           showToast('Erreur lors de la suppression', 'error');
-          btn.disabled = false;
-          btn.style.opacity = '1';
+          confirmBtn.textContent = 'Confirmer';
+          confirmBtn.disabled = false;
         }
-      }
+      };
+      
+      confirmBtn.textContent = 'Confirmer';
+      confirmBtn.disabled = false;
+      modal.classList.add('active');
     });
   });
 }
