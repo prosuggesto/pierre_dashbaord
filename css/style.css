@@ -654,6 +654,7 @@ input[type=number]{-moz-appearance:textfield}
   .menage-content{padding:20px 14px}
   .toast-container{bottom:14px;right:14px;left:14px}
   .toast{max-width:none}
+  #pierre-view .app-empty-state { left: 50%; }
 }
 
 @media(max-width:480px){
@@ -710,6 +711,10 @@ input[type=number]{-moz-appearance:textfield}
 .app-empty-text {
   font-size: 1rem;
   color: var(--g500);
+}
+
+#pierre-view .app-empty-state {
+  left: calc(50% + (var(--sidebar-w) / 2));
 }
 
 /* Floating Update Button */
