@@ -438,12 +438,11 @@ function renderProrataTable() {
 
   let html = '';
   for (let m = 1; m <= 12; m++) {
-    const db = prorataCache[m] || null;
+    const db = prorataCache[m] || {};
     const le = prorataLocalEdits[m] || {};
 
-    const autoOcc = calcOccupiedDays(m, prorataYear);
-    const joursOcc = le.nombre_jours_reserves !== undefined ? le.nombre_jours_reserves : autoOcc;
-    const joursMois = le.nombre_jours_dans_le_mois ?? db?.nombre_jours_dans_le_mois ?? 0;
+    const joursOcc = calcOccupiedDays(m, prorataYear);
+    const joursMois = le.nombre_jours_dans_le_mois ?? db.nombre_jours_dans_le_mois ?? 0;
     const totElec = le.total_facture_electricite ?? db?.total_facture_electricite ?? 0;
     const totEau = le.total_facture_eau ?? db?.total_facture_eau ?? 0;
 
@@ -460,7 +459,7 @@ function renderProrataTable() {
 
     html += `<tr>
       <td class="month-name">${MONTH_NAMES[m - 1]}</td>
-      <td><input type="number" class="table-input" data-month="${m}" data-field="nombre_jours_reserves" value="${joursOcc || ''}" min="0" step="1" placeholder="ex: 14" /></td>
+      <td><input type="number" class="table-input" data-month="${m}" data-field="nombre_jours_reserves" value="${joursOcc || ''}" readonly title="Calculé automatiquement depuis vos réservations" /></td>
       <td><input type="number" class="table-input ${joursMois === 0 ? 'error' : ''}" data-month="${m}" data-field="nombre_jours_dans_le_mois" value="${joursMois || ''}" min="28" max="31" step="1" placeholder="ex: 31" /></td>
       <td><input type="number" class="table-input ${!elValid ? 'error' : ''}" data-month="${m}" data-field="total_facture_electricite" value="${totElec || ''}" min="0" step="0.01" placeholder="ex: 150" /></td>
       <td><input type="number" class="table-input ${!eaValid ? 'error' : ''}" data-month="${m}" data-field="total_facture_eau" value="${totEau || ''}" min="0" step="0.01" placeholder="ex: 80" /></td>
@@ -522,8 +521,7 @@ async function executeProrataSave(month) {
   const db = prorataCache[month] || {};
   const le = prorataLocalEdits[month] || {};
 
-  const autoOcc = calcOccupiedDays(month, prorataYear);
-  const joursOcc = le.nombre_jours_reserves !== undefined ? le.nombre_jours_reserves : autoOcc;
+  const joursOcc = calcOccupiedDays(month, prorataYear);
   const joursMois = le.nombre_jours_dans_le_mois ?? db.nombre_jours_dans_le_mois ?? 0;
   const totElec = le.total_facture_electricite ?? db.total_facture_electricite ?? 0;
   const totEau = le.total_facture_eau ?? db.total_facture_eau ?? 0;
