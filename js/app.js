@@ -217,8 +217,34 @@ function renderReservations(list, container) {
           <div class="card-info-row"><span class="label">Sortie prévue</span><span class="value">${formatDateTime(r.date_heure_menage)}</span></div>
           <div class="card-info-row"><span class="label">Créée le</span><span class="value">${formatDate(r.created_at)}</span></div>
         </div>
+        <button class="btn-icon delete-res-btn" data-id="${r.id}" data-date="${r.date_heure_menage}" title="Supprimer" style="position:absolute; bottom:14px; right:14px; width:32px; height:32px; background:rgba(255,77,106,.1); color:var(--error); border-color:rgba(255,77,106,.3); transition:all .2s;">🗑</button>
       </div>`;
   }).join('');
+
+  container.querySelectorAll('.delete-res-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      const dateIso = btn.dataset.date;
+      if (confirm('Voulez-vous vraiment supprimer cette réservation ? Ses emplois de ménage associés seront également supprimés définitivement.')) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        try {
+          await api('/api/action', {
+            method: 'POST',
+            body: { action: 'delete_reservation', payload: { id, date_heure_iso: dateIso } }
+          });
+          showToast('Réservation supprimée');
+          loadPierreReservations();
+        } catch (err) {
+          console.error(err);
+          showToast('Erreur lors de la suppression', 'error');
+          btn.disabled = false;
+          btn.style.opacity = '1';
+        }
+      }
+    });
+  });
 }
 
 function initReservationModal() {
@@ -655,10 +681,29 @@ function switchSection(name) {
   $$('.nav-item[data-section]').forEach(i => i.classList.toggle('active', i.dataset.section === name));
   $('#reservations-section').style.display = name === 'reservations' ? 'block' : 'none';
   $('#prorata-section').style.display = name === 'prorata' ? 'block' : 'none';
-  const titles = { reservations: 'Réservations', prorata: 'Prorata Impôts' };
+  $('#simulateur-section').style.display = name === 'simulateur' ? 'block' : 'none';
+  const titles = { reservations: 'Réservations', prorata: 'Prorata Impôts', simulateur: 'Simulateur Live' };
   $('#pierreTitle').textContent = titles[name] || 'Gestion';
   if (name === 'reservations') loadPierreReservations();
   else if (name === 'prorata') loadProrata();
+}
+
+function initSimulateur() {
+  const updateSim = () => {
+    const occ = parseFloat($('#sim_occ').value) || 0;
+    const mois = parseFloat($('#sim_mois').value) || 0;
+    const elec = parseFloat($('#sim_elec').value) || 0;
+    const eau = parseFloat($('#sim_eau').value) || 0;
+
+    let pre = 0, prAu = 0;
+    if (mois >= 28 && mois <= 31 && elec > 0 && eau > 0) {
+      pre = (elec / mois) * occ;
+      prAu = (eau / mois) * occ;
+    }
+    $('#sim_res_elec').textContent = pre > 0 ? pre.toFixed(2) + ' €' : '0.00 €';
+    $('#sim_res_eau').textContent = prAu > 0 ? prAu.toFixed(2) + ' €' : '0.00 €';
+  };
+  $$('.sim-input').forEach(i => i.addEventListener('input', updateSim));
 }
 
 // ==========================================================
@@ -759,6 +804,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initTimePicker();
   initProrataNav();
   initNotifPrompt();
+  initSimulateur();
   if (!checkSession()) showView('auth');
 });
 

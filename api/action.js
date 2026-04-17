@@ -50,26 +50,29 @@ export default async function handler(req, res) {
         const baseDate = new Date(dateHeureMenage);
         
         users.forEach(u => {
-          // j-2 : -48h
           const d_j2 = new Date(baseDate.getTime() - (48 * 60 * 60 * 1000));
-          jobs.push({ id_cleaner: u.id, job_name: 'j-2', statut_job: 'en_attente', quantite_job_active: 0, notif_at: d_j2.toISOString() });
+          jobs.push({ id_cleaner: u.id, job_name: 'j-2', statut_job: 'en_attente', quantite_job_active: 0, notif_at: d_j2.toISOString(), date_heure_menage: dateHeureMenage });
           
-          // j-1 : -24h
           const d_j1 = new Date(baseDate.getTime() - (24 * 60 * 60 * 1000));
-          jobs.push({ id_cleaner: u.id, job_name: 'j-1', statut_job: 'en_attente', quantite_job_active: 0, notif_at: d_j1.toISOString() });
+          jobs.push({ id_cleaner: u.id, job_name: 'j-1', statut_job: 'en_attente', quantite_job_active: 0, notif_at: d_j1.toISOString(), date_heure_menage: dateHeureMenage });
           
-          // h-5 : -5h
           const d_h5 = new Date(baseDate.getTime() - (5 * 60 * 60 * 1000));
-          jobs.push({ id_cleaner: u.id, job_name: 'h-5', statut_job: 'en_attente', quantite_job_active: 0, notif_at: d_h5.toISOString() });
+          jobs.push({ id_cleaner: u.id, job_name: 'h-5', statut_job: 'en_attente', quantite_job_active: 0, notif_at: d_h5.toISOString(), date_heure_menage: dateHeureMenage });
           
-          // h-1 : -1h
           const d_h1 = new Date(baseDate.getTime() - (1 * 60 * 60 * 1000));
-          jobs.push({ id_cleaner: u.id, job_name: 'h-1', statut_job: 'en_attente', quantite_job_active: 0, notif_at: d_h1.toISOString() });
+          jobs.push({ id_cleaner: u.id, job_name: 'h-1', statut_job: 'en_attente', quantite_job_active: 0, notif_at: d_h1.toISOString(), date_heure_menage: dateHeureMenage });
         });
 
         await fetch(`${SUPABASE_URL}/rest/v1/jobs`, { method: 'POST', headers, body: JSON.stringify(jobs) });
       }
       return res.status(200).json(resData[0] || resData);
+    }
+
+    if (action === 'delete_reservation') {
+      const { id, date_heure_iso } = payload;
+      await fetch(`${SUPABASE_URL}/rest/v1/jobs?date_heure_menage=eq.${date_heure_iso}`, { method: 'DELETE', headers });
+      await fetch(`${SUPABASE_URL}/rest/v1/reservation?id=eq.${id}`, { method: 'DELETE', headers });
+      return res.status(200).json({ success: true });
     }
 
     if (action === 'upsert_prorata') {
