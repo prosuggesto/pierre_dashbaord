@@ -472,12 +472,14 @@ function renderProrataTable() {
   tbody.innerHTML = html;
   tbody.querySelectorAll('.table-input').forEach(inp => {
     inp.addEventListener('change', handleProrataChange);
-    inp.addEventListener('blur', handleProrataChange);
     inp.addEventListener('focus', () => inp.select());
   });
 }
 
-async function handleProrataChange(e) {
+let prorataSaveTimers = {};
+let prorataSaveInProgress = {};
+
+function handleProrataChange(e) {
   const input = e.target;
   const month = parseInt(input.dataset.month);
   const field = input.dataset.field;
@@ -487,6 +489,36 @@ async function handleProrataChange(e) {
   if (!prorataLocalEdits[month]) prorataLocalEdits[month] = {};
   prorataLocalEdits[month][field] = val;
 
+  // Capture current focus to restore it after render
+  const activeInput = document.activeElement;
+  let focusMonth, focusField;
+  if (activeInput && activeInput.classList.contains('table-input')) {
+    focusMonth = activeInput.dataset.month;
+    focusField = activeInput.dataset.field;
+  }
+
+  renderProrataTable();
+
+  // Restore focus if needed
+  if (focusMonth && focusField) {
+    const newInp = document.querySelector(`.table-input[data-month="${focusMonth}"][data-field="${focusField}"]`);
+    if (newInp) newInp.focus();
+  }
+
+  clearTimeout(prorataSaveTimers[month]);
+  prorataSaveTimers[month] = setTimeout(() => {
+    executeProrataSave(month);
+  }, 800);
+}
+
+async function executeProrataSave(month) {
+  if (prorataSaveInProgress[month]) {
+    clearTimeout(prorataSaveTimers[month]);
+    prorataSaveTimers[month] = setTimeout(() => executeProrataSave(month), 500);
+    return;
+  }
+  
+  prorataSaveInProgress[month] = true;
   const db = prorataCache[month] || {};
   const le = prorataLocalEdits[month] || {};
 
@@ -499,17 +531,16 @@ async function handleProrataChange(e) {
   const jmValid = joursMois >= 28 && joursMois <= 31;
   const allOk = jmValid && parseFloat(totElec) > 0 && parseFloat(totEau) > 0;
 
-  let proElec = 0, proEau = 0;
-  if (allOk) {
-    proElec = (parseFloat(totElec) / joursMois) * joursOcc;
-    proEau = (parseFloat(totEau) / joursMois) * joursOcc;
-  }
-
   if (jmValid) {
+    let proElec = 0, proEau = 0;
+    if (allOk) {
+      proElec = (parseFloat(totElec) / joursMois) * joursOcc;
+      proEau = (parseFloat(totEau) / joursMois) * joursOcc;
+    }
     try {
       const upsert = {
         mois: month, annee: prorataYear,
-        id: db.id, // Will be used by /api/action for PATCH if exists
+        id: db.id,
         nombre_jours_reserves: joursOcc,
         nombre_jours_dans_le_mois: joursMois,
         total_facture_electricite: parseFloat(totElec) || 0,
@@ -531,8 +562,7 @@ async function handleProrataChange(e) {
       showToast('Erreur sauvegarde', 'error');
     }
   }
-
-  renderProrataTable();
+  prorataSaveInProgress[month] = false;
 }
 
 function initProrataNav() {
