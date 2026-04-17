@@ -442,7 +442,7 @@ function renderProrataTable() {
     const le = prorataLocalEdits[m] || {};
 
     const autoOcc = calcOccupiedDays(m, prorataYear);
-    const joursOcc = le.nombre_jours_reserves ?? db?.nombre_jours_reserves ?? autoOcc;
+    const joursOcc = le.nombre_jours_reserves !== undefined ? le.nombre_jours_reserves : autoOcc;
     const joursMois = le.nombre_jours_dans_le_mois ?? db?.nombre_jours_dans_le_mois ?? 0;
     const totElec = le.total_facture_electricite ?? db?.total_facture_electricite ?? 0;
     const totEau = le.total_facture_eau ?? db?.total_facture_eau ?? 0;
@@ -491,7 +491,7 @@ async function handleProrataChange(e) {
   const le = prorataLocalEdits[month] || {};
 
   const autoOcc = calcOccupiedDays(month, prorataYear);
-  const joursOcc = le.nombre_jours_reserves ?? db.nombre_jours_reserves ?? autoOcc;
+  const joursOcc = le.nombre_jours_reserves !== undefined ? le.nombre_jours_reserves : autoOcc;
   const joursMois = le.nombre_jours_dans_le_mois ?? db.nombre_jours_dans_le_mois ?? 0;
   const totElec = le.total_facture_electricite ?? db.total_facture_electricite ?? 0;
   const totEau = le.total_facture_eau ?? db.total_facture_eau ?? 0;
