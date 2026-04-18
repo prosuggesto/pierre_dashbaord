@@ -222,6 +222,24 @@ async function loadPierreReservations() {
   }
 }
 
+function getReservationCardHTML(r, silent = false) {
+  const up = isUpcoming(r.date_heure_menage);
+  const isOpt = r.is_optimistic;
+  return `
+    <div class="reservation-card ${r.is_new ? 'card-animate' : (silent ? '' : 'card-animate')} ${isOpt ? 'is-optimistic' : ''}" data-res-id="${r.id}" style="animation-delay:0s">
+      <div style="position:absolute; top:14px; right:14px; display:flex; align-items:center; gap:8px;">
+        ${!isOpt ? `<button class="btn-icon delete-res-btn" data-id="${r.id}" data-date="${r.date_heure_menage}" title="Supprimer" style="width:28px; height:28px; font-size:0.85rem; background:rgba(255,77,106,.1); color:var(--error); border:1px solid rgba(255,77,106,.3); padding:0; display:flex; align-items:center; justify-content:center; transition:all .2s; border-radius:var(--r-sm);">🗑</button>` : ''}
+        <span class="card-badge ${up ? 'upcoming' : 'past'}" style="position:relative; top:auto; right:auto;">${up ? 'À venir' : 'Passée'}</span>
+      </div>
+      <div class="card-title" style="padding-right:110px;">📅 Réservation #${r.id}${isOpt ? ' (En cours…)' : ''}</div>
+      <div class="card-info">
+        <div class="card-info-row"><span class="label">Nombre de jours</span><span class="value">${r.nombre_jours_reserves} jour${r.nombre_jours_reserves > 1 ? 's' : ''}</span></div>
+        <div class="card-info-row"><span class="label">Sortie prévue</span><span class="value">${formatDateTime(r.date_heure_menage)}</span></div>
+        <div class="card-info-row"><span class="label">Créée le</span><span class="value">${formatDate(r.created_at)}</span></div>
+      </div>
+    </div>`;
+}
+
 function renderReservations(list, container, silent = false) {
   if (!list.length) {
     container.classList.add('is-empty');
@@ -233,74 +251,69 @@ function renderReservations(list, container, silent = false) {
     return;
   }
   container.classList.remove('is-empty');
-  container.innerHTML = list.map((r, i) => {
-    const up = isUpcoming(r.date_heure_menage);
-    const isOpt = r.is_optimistic;
-    return `
-      <div class="reservation-card ${silent ? '' : 'card-animate'} ${isOpt ? 'is-optimistic' : ''}" style="animation-delay:${i * .05}s">
-        <div style="position:absolute; top:14px; right:14px; display:flex; align-items:center; gap:8px;">
-          ${!isOpt ? `<button class="btn-icon delete-res-btn" data-id="${r.id}" data-date="${r.date_heure_menage}" title="Supprimer" style="width:28px; height:28px; font-size:0.85rem; background:rgba(255,77,106,.1); color:var(--error); border:1px solid rgba(255,77,106,.3); padding:0; display:flex; align-items:center; justify-content:center; transition:all .2s; border-radius:var(--r-sm);">🗑</button>` : ''}
-          <span class="card-badge ${up ? 'upcoming' : 'past'}" style="position:relative; top:auto; right:auto;">${up ? 'À venir' : 'Passée'}</span>
-        </div>
-        <div class="card-title" style="padding-right:110px;">📅 Réservation #${r.id}${isOpt ? ' (En cours…)' : ''}</div>
-        <div class="card-info">
-          <div class="card-info-row"><span class="label">Nombre de jours</span><span class="value">${r.nombre_jours_reserves} jour${r.nombre_jours_reserves > 1 ? 's' : ''}</span></div>
-          <div class="card-info-row"><span class="label">Sortie prévue</span><span class="value">${formatDateTime(r.date_heure_menage)}</span></div>
-          <div class="card-info-row"><span class="label">Créée le</span><span class="value">${formatDate(r.created_at)}</span></div>
-        </div>
-      </div>`;
-  }).join('');
+  container.innerHTML = list.map((r, i) => getReservationCardHTML(r, silent)).join('');
+  attachDeleteEvents(container);
+}
 
+function attachDeleteEvents(container) {
   container.querySelectorAll('.delete-res-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const id = btn.dataset.id;
-      const dateIso = btn.dataset.date;
-      
-      const modal = document.querySelector('#deleteConfirmModal');
-      const confirmBtn = document.querySelector('#deleteConfirmBtn');
-      const cancelBtn = document.querySelector('#deleteCancel');
-      
-      const closeModal = () => modal.classList.remove('active');
-      
-      cancelBtn.onclick = closeModal;
-      document.querySelector('#deleteBackdrop').onclick = closeModal;
-      
-      confirmBtn.onclick = async () => {
-        confirmBtn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;margin:auto;"></div>';
-        confirmBtn.disabled = true;
-        
-        // --- SUPPRESSION OPTIMISTE ---
-        const originalCache = [...(reservationsCache || [])];
-        const resIdx = originalCache.findIndex(r => r.id == id);
-        if (resIdx !== -1) {
-          reservationsCache.splice(resIdx, 1);
-          renderReservations(reservationsCache, $('#reservationsList'), true);
-        }
-        showToast('Suppression en cours…');
-        modal.classList.remove('active');
+    // Supprimer l'ancien listener pour éviter les doublons au rafraîchissement
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
 
-        try {
-          await api('/api/action', {
-            method: 'POST',
-            body: { action: 'delete_reservation', payload: { id, date_heure_iso: dateIso } }
-          });
-          showToast('Réservation supprimée');
-          allReservationsCache = null; // Invalider le calendrier
-        } catch (err) {
-          console.error(err);
-          showToast('Erreur lors de la suppression', 'error');
-          // Annulation de l'optimisme
-          reservationsCache = originalCache;
-          renderReservations(reservationsCache, $('#reservationsList'), true);
-        }
-      };
-      
-      confirmBtn.textContent = 'Confirmer';
-      confirmBtn.disabled = false;
-      modal.classList.add('active');
+    newBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = newBtn.dataset.id;
+      const dateIso = newBtn.dataset.date;
+      initReservationDeleteModal(id, dateIso);
     });
   });
+}
+
+function initReservationDeleteModal(id, dateIso) {
+  const modal = document.querySelector('#deleteConfirmModal');
+  const confirmBtn = document.querySelector('#deleteConfirmBtn');
+  const cancelBtn = document.querySelector('#deleteCancel');
+  
+  const closeModal = () => modal.classList.remove('active');
+  cancelBtn.onclick = closeModal;
+  document.querySelector('#deleteBackdrop').onclick = closeModal;
+  
+  confirmBtn.onclick = async () => {
+    confirmBtn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;margin:auto;"></div>';
+    confirmBtn.disabled = true;
+    
+    // --- SUPPRESSION CHIRURGICALE ---
+    const card = document.querySelector(`.reservation-card[data-res-id="${id}"]`);
+    if (card) card.remove();
+    
+    const resIdx = (reservationsCache || []).findIndex(r => r.id == id);
+    if (resIdx !== -1) reservationsCache.splice(resIdx, 1);
+    
+    if (reservationsCache && reservationsCache.length === 0) {
+      renderReservations([], $('#reservationsList'));
+    }
+
+    showToast('Suppression…');
+    closeModal();
+
+    try {
+      await api('/api/action', {
+        method: 'POST',
+        body: { action: 'delete_reservation', payload: { id, date_heure_iso: dateIso } }
+      });
+      showToast('Réservation supprimée');
+      allReservationsCache = null; 
+    } catch (err) {
+      console.error(err);
+      showToast('Erreur lors de la suppression', 'error');
+      loadPierreReservations(); // Rechargement complet en cas d'erreur
+    }
+  };
+  
+  confirmBtn.textContent = 'Confirmer';
+  confirmBtn.disabled = false;
+  modal.classList.add('active');
 }
 
 function initReservationModal() {
@@ -338,21 +351,29 @@ function initReservationModal() {
       return;
     }
 
-    // --- UI OPTIMISTE ---
+    // --- CRÉATION CHIRURGICALE (0 CLIGNOTEMENT) ---
     const tempId = Date.now();
     const optimisticRes = {
       id: tempId,
       nombre_jours_reserves: nbJours,
       date_heure_menage: dateHeure.toISOString(),
       created_at: new Date().toISOString(),
-      is_optimistic: true
+      is_optimistic: true,
+      is_new: true
     };
 
     if (!reservationsCache) reservationsCache = [];
     reservationsCache.unshift(optimisticRes);
-    renderReservations(reservationsCache, $('#reservationsList'));
     
-    // Fermeture immédiate du modal
+    // Insertion sans reset innerHTML
+    const listContainer = $('#reservationsList');
+    if (listContainer.classList.contains('is-empty')) {
+      renderReservations(reservationsCache, listContainer);
+    } else {
+      listContainer.insertAdjacentHTML('afterbegin', getReservationCardHTML(optimisticRes));
+      attachDeleteEvents(listContainer);
+    }
+    
     modal.classList.remove('active');
     form.reset();
     $('#sortieAnnee').value = new Date().getFullYear();
@@ -361,32 +382,37 @@ function initReservationModal() {
     $('#sortieHeure').value = '';
     btn.disabled = false; btn.textContent = 'Créer la réservation';
 
-    // Synchronisation silencieuse
     api('/api/action', {
       method: 'POST',
       body: {
         action: 'create_reservation',
         payload: {
-          reservation: {
-            nombre_jours_reserves: nbJours,
-            date_heure_iso: dateHeure.toISOString()
-          }
+          reservation: { nombre_jours_reserves: nbJours, date_heure_iso: dateHeure.toISOString() }
         }
       }
     }).then(realData => {
-      // Remplacement par les vraies données
       const idx = reservationsCache.findIndex(r => r.id === tempId);
       if (idx !== -1) reservationsCache[idx] = realData;
-      allReservationsCache = null; // Invalider le calendrier universel
-      renderReservations(reservationsCache, $('#reservationsList'));
+      allReservationsCache = null;
+
+      // Mise à jour chirurgicale de la carte
+      const oldCard = document.querySelector(`.reservation-card[data-res-id="${tempId}"]`);
+      if (oldCard) {
+        realData.is_new = false;
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = getReservationCardHTML(realData, true);
+        const newCard = tempDiv.firstElementChild;
+        oldCard.parentNode.replaceChild(newCard, oldCard);
+        attachDeleteEvents(listContainer);
+      }
       showToast('Réservation créée !');
     }).catch(err => {
       console.error(err);
-      // Annulation de l'optimisme
       const idx = reservationsCache.findIndex(r => r.id === tempId);
       if (idx !== -1) reservationsCache.splice(idx, 1);
-      renderReservations(reservationsCache || [], $('#reservationsList'));
-      showToast('Erreur lors de la création', 'error');
+      const card = document.querySelector(`.reservation-card[data-res-id="${tempId}"]`);
+      if (card) card.remove();
+      showToast('Erreur création', 'error');
     });
   });
 }
@@ -878,17 +904,23 @@ function initCleanup() {
     confirmBtn.textContent = 'Nettoyage…';
 
     try {
+      // --- SUPPRESSION CHIRURGICALE (PRORATA) ---
+      const selectedRows = document.querySelectorAll('.prorata-table tbody tr.selected');
+      selectedRows.forEach(row => row.style.display = 'none');
+      closeModal();
+      showToast('Nettoyage en cours…');
+
       await api('/api/action', {
         method: 'POST',
         body: { action: 'delete_prorata', payload: { ids: idsToDelete } }
       });
       showToast('Données supprimées');
       selectedProrataMonths.clear();
-      closeModal();
-      loadProrata(); // Recharger le tableau
+      loadProrata(); // Rechargement discret du fond
     } catch (err) {
       console.error(err);
       showToast('Erreur lors du nettoyage', 'error');
+      loadProrata(); // Re-afficher en cas d'erreur
     }
     confirmBtn.disabled = false;
     confirmBtn.textContent = 'Supprimer';
