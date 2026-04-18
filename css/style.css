@@ -779,3 +779,24 @@ input[type=number]{-moz-appearance:textfield}
 .floating-update-btn:active {
   transform: scale(0.95);
 }
+
+/* Nettoyage multi-sélection Prorata */
+.prorata-table tbody tr {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.prorata-table tbody tr.selected {
+  background: rgba(255, 77, 106, 0.08) !important;
+}
+.prorata-table tbody tr.selected td:first-child {
+  border-left: 3px solid var(--error);
+}
+.btn-error {
+  background: var(--error);
+  color: #fff;
+  border: 1px solid rgba(255, 77, 106, 0.3);
+}
+.btn-error:hover {
+  background: #ff3355;
+  box-shadow: 0 4px 12px rgba(255, 77, 106, 0.2);
+}

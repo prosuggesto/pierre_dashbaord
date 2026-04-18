@@ -89,6 +89,14 @@ export default async function handler(req, res) {
       return res.status(200).json(data[0] || data);
     }
 
+    if (action === 'delete_prorata') {
+      const { ids } = payload;
+      if (!ids || !ids.length) return res.status(400).json({ error: 'No IDs provided' });
+      url = `${SUPABASE_URL}/rest/v1/prorata_charges?id=in.(${ids.join(',')})`;
+      await fetch(url, { method: 'DELETE', headers });
+      return res.status(200).json({ success: true });
+    }
+
     res.status(400).json({ error: 'Invalid action' });
   } catch (err) {
     res.status(500).json({ error: 'Server error', message: err.message });

@@ -60,6 +60,13 @@ function showToast(msg, type = 'success') {
 let currentUser = null;
 let isRegisterMode = false;
 
+// Global Cache & State
+let reservationsCache = null;
+let menageReservationsCache = null;
+let prorataCacheYear = null;
+let allReservationsCache = null;
+let selectedProrataMonths = new Set();
+
 function setOneSignalUser(id) {
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   window.OneSignalDeferred.push(function (OneSignal) {
@@ -189,13 +196,29 @@ function navigateToView(statut) {
 // ==========================================================
 async function loadPierreReservations() {
   const c = $('#reservationsList');
-  c.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+
+  // Affichage instantané si en cache (localStorage ou session)
+  const cached = reservationsCache || JSON.parse(localStorage.getItem('gm_cache_res_pierre') || 'null');
+  if (cached) {
+    reservationsCache = cached;
+    renderReservations(cached, c);
+  } else {
+    c.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+  }
+
   try {
     const data = await api('/api/data?type=reservations_pierre');
-    renderReservations(data || [], c);
+    // Mise à jour si différent
+    if (JSON.stringify(data) !== JSON.stringify(reservationsCache)) {
+      reservationsCache = data;
+      localStorage.setItem('gm_cache_res_pierre', JSON.stringify(data));
+      renderReservations(data || [], c);
+    }
   } catch (err) {
     console.error(err);
-    c.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Erreur de chargement</p></div>';
+    if (!reservationsCache) {
+      c.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Erreur de chargement</p></div>';
+    }
   }
 }
 
@@ -325,6 +348,10 @@ function initReservationModal() {
       $('#selectedTimeDisplay').textContent = 'Sélectionner l\'heure';
       $('#selectedTimeDisplay').className = 'placeholder';
       $('#sortieHeure').value = '';
+      
+      // Invalidation des caches après modification
+      reservationsCache = null;
+      allReservationsCache = null;
       loadPierreReservations();
     } catch (err) {
       console.error(err);
@@ -449,15 +476,25 @@ let prorataLocalEdits = {};
 let allReservationsForProrata = [];
 
 async function loadProrata() {
-  prorataCache = {};
-  prorataLocalEdits = {};
+  // Si déjà chargé pour cette année dans la session, on peut sauter l'API ou le faire en fond
+  const tbody = $('#prorataBody');
+  if (!tbody.innerHTML) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;"><div class="spinner" style="margin:auto;"></div></td></tr>';
+  }
 
   try {
-    const pData = await api(`/api/data?type=prorata&year=${prorataYear}`);
-    (pData || []).forEach(r => { prorataCache[r.mois] = r; });
+    // Parallélisation des appels
+    const [pData, rData] = await Promise.all([
+      api(`/api/data?type=prorata&year=${prorataYear}`),
+      allReservationsCache ? Promise.resolve(allReservationsCache) : api('/api/data?type=all_reservations')
+    ]);
 
-    const rData = await api('/api/data?type=all_reservations');
-    allReservationsForProrata = rData || [];
+    prorataCache = {};
+    prorataLocalEdits = {};
+    (pData || []).forEach(r => { prorataCache[r.mois] = r; });
+    
+    allReservationsCache = rData || [];
+    allReservationsForProrata = allReservationsCache;
 
     renderProrataTable();
   } catch (err) {
@@ -504,7 +541,9 @@ function renderProrataTable() {
       proEau = (parseFloat(totEau) / joursMois) * joursOcc;
     }
 
-    html += `<tr>
+    const isSelected = selectedProrataMonths.has(m);
+
+    html += `<tr class="${isSelected ? 'selected' : ''}" data-month="${m}">
       <td class="month-name">${MONTH_NAMES[m - 1]}</td>
       <td><input type="number" class="table-input" data-month="${m}" data-field="nombre_jours_reserves" value="${joursOcc || ''}" readonly title="Calculé automatiquement depuis vos réservations" /></td>
       <td><input type="number" class="table-input" data-month="${m}" data-field="nombre_jours_dans_le_mois" value="${joursMois}" readonly title="Géré automatiquement" /></td>
@@ -519,6 +558,17 @@ function renderProrataTable() {
   tbody.querySelectorAll('.table-input').forEach(inp => {
     inp.addEventListener('change', handleProrataChange);
     inp.addEventListener('focus', () => inp.select());
+    inp.addEventListener('click', (e) => e.stopPropagation()); // Éviter de déselectionner la ligne
+  });
+
+  tbody.querySelectorAll('tr').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const m = parseInt(tr.dataset.month);
+      if (selectedProrataMonths.has(m)) selectedProrataMonths.delete(m);
+      else selectedProrataMonths.add(m);
+      renderProrataTable();
+      updateCleanupBtn();
+    });
   });
 }
 
@@ -617,13 +667,27 @@ function initProrataNav() {
 // ==========================================================
 async function loadMenageReservations() {
   const c = $('#menageReservationsList');
-  c.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+
+  const cached = menageReservationsCache || JSON.parse(localStorage.getItem('gm_cache_res_menage') || 'null');
+  if (cached) {
+    menageReservationsCache = cached;
+    renderMenageJobs(cached, c);
+  } else {
+    c.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+  }
+
   try {
     const data = await api(`/api/data?type=reservations_menage&userId=${currentUser.id}`);
-    renderMenageJobs(data || [], c);
+    if (JSON.stringify(data) !== JSON.stringify(menageReservationsCache)) {
+      menageReservationsCache = data;
+      localStorage.setItem('gm_cache_res_menage', JSON.stringify(data));
+      renderMenageJobs(data || [], c);
+    }
   } catch (err) {
     console.error(err);
-    c.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Erreur de chargement</p></div>';
+    if (!menageReservationsCache) {
+      c.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Erreur de chargement</p></div>';
+    }
   }
 }
 
@@ -702,8 +766,70 @@ function switchSection(name) {
   $('#simulateur-section').style.display = name === 'simulateur' ? 'block' : 'none';
   const titles = { reservations: 'Réservations', prorata: 'Prorata Impôts', simulateur: 'Simulateur Live' };
   $('#pierreTitle').textContent = titles[name] || 'Gestion';
-  if (name === 'reservations') loadPierreReservations();
-  else if (name === 'prorata') loadProrata();
+
+  // Chargement paresseux & Cache
+  if (name === 'reservations') {
+    // Si déjà là, loadPierreReservations gérera le rafraîchissement silencieux
+    loadPierreReservations();
+  }
+  else if (name === 'prorata') {
+    loadProrata();
+  }
+  
+  // Reset sélection si on change d'onglet
+  selectedProrataMonths.clear();
+  updateCleanupBtn();
+}
+
+function updateCleanupBtn() {
+  const btn = $('#cleanupBtn');
+  if (!btn) return;
+  if (selectedProrataMonths.size > 0) {
+    btn.style.display = 'block';
+    btn.textContent = `🧹 Nettoyer (${selectedProrataMonths.size})`;
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+function initCleanup() {
+  const btn = $('#cleanupBtn');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    const idsToDelete = [];
+    selectedProrataMonths.forEach(m => {
+      const db = prorataCache[m];
+      if (db && db.id) idsToDelete.push(db.id);
+    });
+
+    if (!idsToDelete.length) {
+      showToast('Aucune donnée en base pour ces mois r', 'error');
+      selectedProrataMonths.clear();
+      renderProrataTable();
+      updateCleanupBtn();
+      return;
+    }
+
+    if (!confirm(`Voulez-vous vraiment supprimer les données de ${idsToDelete.length} mois ?`)) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Nettoyage…';
+
+    try {
+      await api('/api/action', {
+        method: 'POST',
+        body: { action: 'delete_prorata', payload: { ids: idsToDelete } }
+      });
+      showToast('Données supprimées');
+      selectedProrataMonths.clear();
+      loadProrata(); // Recharger le tableau
+    } catch (err) {
+      console.error(err);
+      showToast('Erreur lors du nettoyage', 'error');
+    }
+    btn.disabled = false;
+    updateCleanupBtn();
+  });
 }
 
 function initSimulateur() {
@@ -821,6 +947,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initReservationModal();
   initTimePicker();
   initProrataNav();
+  initCleanup();
   initNotifPrompt();
   initSimulateur();
   if (!checkSession()) showView('auth');
