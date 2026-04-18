@@ -212,7 +212,7 @@ async function loadPierreReservations() {
     if (JSON.stringify(data) !== JSON.stringify(reservationsCache)) {
       reservationsCache = data;
       localStorage.setItem('gm_cache_res_pierre', JSON.stringify(data));
-      renderReservations(data || [], c);
+      renderReservations(data || [], c, true);
     }
   } catch (err) {
     console.error(err);
@@ -222,7 +222,7 @@ async function loadPierreReservations() {
   }
 }
 
-function renderReservations(list, container) {
+function renderReservations(list, container, silent = false) {
   if (!list.length) {
     container.classList.add('is-empty');
     container.innerHTML = `
@@ -237,7 +237,7 @@ function renderReservations(list, container) {
     const up = isUpcoming(r.date_heure_menage);
     const isOpt = r.is_optimistic;
     return `
-      <div class="reservation-card card-animate ${isOpt ? 'is-optimistic' : ''}" style="animation-delay:${i * .05}s">
+      <div class="reservation-card ${silent ? '' : 'card-animate'} ${isOpt ? 'is-optimistic' : ''}" style="animation-delay:${i * .05}s">
         <div style="position:absolute; top:14px; right:14px; display:flex; align-items:center; gap:8px;">
           ${!isOpt ? `<button class="btn-icon delete-res-btn" data-id="${r.id}" data-date="${r.date_heure_menage}" title="Supprimer" style="width:28px; height:28px; font-size:0.85rem; background:rgba(255,77,106,.1); color:var(--error); border:1px solid rgba(255,77,106,.3); padding:0; display:flex; align-items:center; justify-content:center; transition:all .2s; border-radius:var(--r-sm);">🗑</button>` : ''}
           <span class="card-badge ${up ? 'upcoming' : 'past'}" style="position:relative; top:auto; right:auto;">${up ? 'À venir' : 'Passée'}</span>
@@ -270,19 +270,29 @@ function renderReservations(list, container) {
         confirmBtn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;margin:auto;"></div>';
         confirmBtn.disabled = true;
         
+        // --- SUPPRESSION OPTIMISTE ---
+        const originalCache = [...(reservationsCache || [])];
+        const resIdx = originalCache.findIndex(r => r.id == id);
+        if (resIdx !== -1) {
+          reservationsCache.splice(resIdx, 1);
+          renderReservations(reservationsCache, $('#reservationsList'), true);
+        }
+        showToast('Suppression en cours…');
+        modal.classList.remove('active');
+
         try {
           await api('/api/action', {
             method: 'POST',
             body: { action: 'delete_reservation', payload: { id, date_heure_iso: dateIso } }
           });
           showToast('Réservation supprimée');
-          closeModal();
-          loadPierreReservations();
+          allReservationsCache = null; // Invalider le calendrier
         } catch (err) {
           console.error(err);
           showToast('Erreur lors de la suppression', 'error');
-          confirmBtn.textContent = 'Confirmer';
-          confirmBtn.disabled = false;
+          // Annulation de l'optimisme
+          reservationsCache = originalCache;
+          renderReservations(reservationsCache, $('#reservationsList'), true);
         }
       };
       
@@ -718,7 +728,7 @@ async function loadMenageReservations() {
     if (JSON.stringify(data) !== JSON.stringify(menageReservationsCache)) {
       menageReservationsCache = data;
       localStorage.setItem('gm_cache_res_menage', JSON.stringify(data));
-      renderMenageJobs(data || [], c);
+      renderMenageJobs(data || [], c, true);
     }
   } catch (err) {
     console.error(err);
@@ -728,7 +738,7 @@ async function loadMenageReservations() {
   }
 }
 
-function renderMenageJobs(list, container) {
+function renderMenageJobs(list, container, silent = false) {
   if (!list.length) {
     container.classList.add('is-empty');
     container.innerHTML = `
@@ -746,7 +756,7 @@ function renderMenageJobs(list, container) {
     const status = r.statut_job || 'À faire';
 
     return `
-      <div class="reservation-card card-animate" style="animation-delay:${i * .05}s" onclick="location.href='/job?id=${r.id}'">
+      <div class="reservation-card ${silent ? '' : 'card-animate'}" style="animation-delay:${i * .05}s" onclick="location.href='/job?id=${r.id}'">
         <span class="card-badge ${up ? 'upcoming' : 'past'}">${up ? 'À venir' : 'Passée'}</span>
         <div class="card-title">🧹 ${title}</div>
         <div class="card-info">
@@ -831,8 +841,24 @@ function updateCleanupBtn() {
 
 function initCleanup() {
   const btn = $('#cleanupBtn');
-  if (!btn) return;
-  btn.addEventListener('click', async () => {
+  const modal = $('#cleanupConfirmModal');
+  const confirmBtn = $('#cleanupConfirmBtn');
+  const cancelBtn = $('#cleanupCancel');
+  const backdrop = $('#cleanupBackdrop');
+
+  if (!btn || !modal) return;
+
+  btn.addEventListener('click', () => {
+    const count = selectedProrataMonths.size;
+    $('#cleanupDesc').textContent = `Voulez-vous vraiment supprimer les données pour les ${count} mois sélectionnés ?`;
+    modal.classList.add('active');
+  });
+
+  const closeModal = () => modal.classList.remove('active');
+  cancelBtn.addEventListener('click', closeModal);
+  backdrop.addEventListener('click', closeModal);
+
+  confirmBtn.addEventListener('click', async () => {
     const idsToDelete = [];
     selectedProrataMonths.forEach(m => {
       const db = prorataCache[m];
@@ -840,17 +866,16 @@ function initCleanup() {
     });
 
     if (!idsToDelete.length) {
-      showToast('Aucune donnée en base pour ces mois r', 'error');
+      showToast('Aucune donnée en base pour ces mois', 'error');
       selectedProrataMonths.clear();
       renderProrataTable();
       updateCleanupBtn();
+      closeModal();
       return;
     }
 
-    if (!confirm(`Voulez-vous vraiment supprimer les données de ${idsToDelete.length} mois ?`)) return;
-
-    btn.disabled = true;
-    btn.textContent = 'Nettoyage…';
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Nettoyage…';
 
     try {
       await api('/api/action', {
@@ -859,12 +884,14 @@ function initCleanup() {
       });
       showToast('Données supprimées');
       selectedProrataMonths.clear();
+      closeModal();
       loadProrata(); // Recharger le tableau
     } catch (err) {
       console.error(err);
       showToast('Erreur lors du nettoyage', 'error');
     }
-    btn.disabled = false;
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = 'Supprimer';
     updateCleanupBtn();
   });
 }

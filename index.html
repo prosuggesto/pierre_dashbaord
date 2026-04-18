@@ -249,6 +249,22 @@
   </div>
 
   <!-- ======================================
+       CLEANUP CONFIRMATION MODAL (Liquid Glass)
+       ====================================== -->
+  <div id="cleanupConfirmModal" class="modal delete-modal-wrapper">
+    <div class="modal-backdrop" id="cleanupBackdrop"></div>
+    <div class="modal-content delete-glass-content">
+      <div class="delete-icon-box">🧹</div>
+      <h3>Nettoyer les données ?</h3>
+      <p id="cleanupDesc" style="color:var(--g300); font-size:0.9rem; margin-bottom:24px; line-height:1.5;">Voulez-vous vraiment supprimer les données pour les mois sélectionnés ?</p>
+      <div class="notif-actions">
+        <button class="btn btn-ghost btn-full" id="cleanupCancel">Annuler</button>
+        <button class="btn btn-primary btn-full" id="cleanupConfirmBtn" style="background:#ff4d6a; color:#fff; border-color:#ff4d6a;">Supprimer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================
        TIME PICKER (iOS-style)
        ====================================== -->
   <div id="timePicker" class="time-picker-overlay">
