@@ -39,6 +39,10 @@ function formatDateTime(d) {
   });
 }
 
+function getDaysInMonth(month, year) {
+  return new Date(year, month, 0).getDate();
+}
+
 function isUpcoming(d) { return d ? new Date(d) > new Date() : false; }
 
 function showToast(msg, type = 'success') {
@@ -486,14 +490,13 @@ function renderProrataTable() {
     const le = prorataLocalEdits[m] || {};
 
     const joursOcc = calcOccupiedDays(m, prorataYear);
-    const joursMois = le.nombre_jours_dans_le_mois ?? db.nombre_jours_dans_le_mois ?? 0;
+    const joursMois = getDaysInMonth(m, prorataYear);
     const totElec = le.total_facture_electricite ?? db?.total_facture_electricite ?? 0;
     const totEau = le.total_facture_eau ?? db?.total_facture_eau ?? 0;
 
-    const jmValid = joursMois >= 28 && joursMois <= 31;
     const elValid = parseFloat(totElec) > 0;
     const eaValid = parseFloat(totEau) > 0;
-    const allOk = jmValid && elValid && eaValid;
+    const allOk = elValid && eaValid;
 
     let proElec = 0, proEau = 0;
     if (allOk) {
@@ -504,11 +507,11 @@ function renderProrataTable() {
     html += `<tr>
       <td class="month-name">${MONTH_NAMES[m - 1]}</td>
       <td><input type="number" class="table-input" data-month="${m}" data-field="nombre_jours_reserves" value="${joursOcc || ''}" readonly title="Calculé automatiquement depuis vos réservations" /></td>
-      <td><input type="number" class="table-input ${joursMois === 0 ? 'error' : ''}" data-month="${m}" data-field="nombre_jours_dans_le_mois" value="${joursMois || ''}" min="28" max="31" step="1" placeholder="ex: 31" /></td>
+      <td><input type="number" class="table-input" data-month="${m}" data-field="nombre_jours_dans_le_mois" value="${joursMois}" readonly title="Géré automatiquement" /></td>
       <td><input type="number" class="table-input ${!elValid ? 'error' : ''}" data-month="${m}" data-field="total_facture_electricite" value="${totElec || ''}" min="0" step="0.01" placeholder="ex: 150" /></td>
       <td><input type="number" class="table-input ${!eaValid ? 'error' : ''}" data-month="${m}" data-field="total_facture_eau" value="${totEau || ''}" min="0" step="0.01" placeholder="ex: 80" /></td>
-      <td class="prorata-value ${!allOk ? 'error' : ''}">${allOk ? proElec.toFixed(2) + ' €' : 'Renseigner les infos'}</td>
-      <td class="prorata-value ${!allOk ? 'error' : ''}">${allOk ? proEau.toFixed(2) + ' €' : 'Renseigner les infos'}</td>
+      <td class="prorata-value ${!allOk ? 'error' : ''}">${allOk ? proElec.toFixed(2) + ' €' : 'Renseigner les factures'}</td>
+      <td class="prorata-value ${!allOk ? 'error' : ''}">${allOk ? proEau.toFixed(2) + ' €' : 'Renseigner les factures'}</td>
     </tr>`;
   }
 
@@ -566,43 +569,40 @@ async function executeProrataSave(month) {
   const le = prorataLocalEdits[month] || {};
 
   const joursOcc = calcOccupiedDays(month, prorataYear);
-  const joursMois = le.nombre_jours_dans_le_mois ?? db.nombre_jours_dans_le_mois ?? 0;
+  const joursMois = getDaysInMonth(month, prorataYear);
   const totElec = le.total_facture_electricite ?? db.total_facture_electricite ?? 0;
   const totEau = le.total_facture_eau ?? db.total_facture_eau ?? 0;
 
-  const jmValid = joursMois >= 28 && joursMois <= 31;
-  const allOk = jmValid && parseFloat(totElec) > 0 && parseFloat(totEau) > 0;
+  const allOk = parseFloat(totElec) > 0 && parseFloat(totEau) > 0;
 
-  if (jmValid) {
-    let proElec = 0, proEau = 0;
-    if (allOk) {
-      proElec = (parseFloat(totElec) / joursMois) * joursOcc;
-      proEau = (parseFloat(totEau) / joursMois) * joursOcc;
-    }
-    try {
-      const upsert = {
-        mois: month, annee: prorataYear,
-        id: db.id,
-        nombre_jours_reserves: joursOcc,
-        nombre_jours_dans_le_mois: joursMois,
-        total_facture_electricite: parseFloat(totElec) || 0,
-        total_facture_eau: parseFloat(totEau) || 0,
-        prorata_electricite: parseFloat(proElec.toFixed(2)),
-        prorata_eau: parseFloat(proEau.toFixed(2)),
-        updated_at: new Date().toISOString()
-      };
+  let proElec = 0, proEau = 0;
+  if (allOk) {
+    proElec = (parseFloat(totElec) / joursMois) * joursOcc;
+    proEau = (parseFloat(totEau) / joursMois) * joursOcc;
+  }
+  try {
+    const upsert = {
+      mois: month, annee: prorataYear,
+      id: db.id,
+      nombre_jours_reserves: joursOcc,
+      nombre_jours_dans_le_mois: joursMois,
+      total_facture_electricite: parseFloat(totElec) || 0,
+      total_facture_eau: parseFloat(totEau) || 0,
+      prorata_electricite: parseFloat(proElec.toFixed(2)),
+      prorata_eau: parseFloat(proEau.toFixed(2)),
+      updated_at: new Date().toISOString()
+    };
 
-      const result = await api('/api/action', {
-        method: 'POST',
-        body: { action: 'upsert_prorata', payload: upsert }
-      });
+    const result = await api('/api/action', {
+      method: 'POST',
+      body: { action: 'upsert_prorata', payload: upsert }
+    });
 
-      prorataCache[month] = result;
-      showToast('Enregistré');
-    } catch (err) {
-      console.error(err);
-      showToast('Erreur sauvegarde', 'error');
-    }
+    prorataCache[month] = result;
+    showToast('Enregistré');
+  } catch (err) {
+    console.error(err);
+    showToast('Erreur sauvegarde', 'error');
   }
   prorataSaveInProgress[month] = false;
 }
