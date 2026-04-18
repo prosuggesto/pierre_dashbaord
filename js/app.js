@@ -235,13 +235,14 @@ function renderReservations(list, container) {
   container.classList.remove('is-empty');
   container.innerHTML = list.map((r, i) => {
     const up = isUpcoming(r.date_heure_menage);
+    const isOpt = r.is_optimistic;
     return `
-      <div class="reservation-card card-animate" style="animation-delay:${i * .05}s">
+      <div class="reservation-card card-animate ${isOpt ? 'is-optimistic' : ''}" style="animation-delay:${i * .05}s">
         <div style="position:absolute; top:14px; right:14px; display:flex; align-items:center; gap:8px;">
-          <button class="btn-icon delete-res-btn" data-id="${r.id}" data-date="${r.date_heure_menage}" title="Supprimer" style="width:28px; height:28px; font-size:0.85rem; background:rgba(255,77,106,.1); color:var(--error); border:1px solid rgba(255,77,106,.3); padding:0; display:flex; align-items:center; justify-content:center; transition:all .2s; border-radius:var(--r-sm);">🗑</button>
+          ${!isOpt ? `<button class="btn-icon delete-res-btn" data-id="${r.id}" data-date="${r.date_heure_menage}" title="Supprimer" style="width:28px; height:28px; font-size:0.85rem; background:rgba(255,77,106,.1); color:var(--error); border:1px solid rgba(255,77,106,.3); padding:0; display:flex; align-items:center; justify-content:center; transition:all .2s; border-radius:var(--r-sm);">🗑</button>` : ''}
           <span class="card-badge ${up ? 'upcoming' : 'past'}" style="position:relative; top:auto; right:auto;">${up ? 'À venir' : 'Passée'}</span>
         </div>
-        <div class="card-title" style="padding-right:110px;">📅 Réservation #${r.id}</div>
+        <div class="card-title" style="padding-right:110px;">📅 Réservation #${r.id}${isOpt ? ' (En cours…)' : ''}</div>
         <div class="card-info">
           <div class="card-info-row"><span class="label">Nombre de jours</span><span class="value">${r.nombre_jours_reserves} jour${r.nombre_jours_reserves > 1 ? 's' : ''}</span></div>
           <div class="card-info-row"><span class="label">Sortie prévue</span><span class="value">${formatDateTime(r.date_heure_menage)}</span></div>
@@ -327,37 +328,56 @@ function initReservationModal() {
       return;
     }
 
-    try {
-      await api('/api/action', {
-        method: 'POST',
-        body: {
-          action: 'create_reservation',
-          payload: {
-            reservation: {
-              nombre_jours_reserves: nbJours,
-              date_heure_iso: dateHeure.toISOString()
-            }
+    // --- UI OPTIMISTE ---
+    const tempId = Date.now();
+    const optimisticRes = {
+      id: tempId,
+      nombre_jours_reserves: nbJours,
+      date_heure_menage: dateHeure.toISOString(),
+      created_at: new Date().toISOString(),
+      is_optimistic: true
+    };
+
+    if (!reservationsCache) reservationsCache = [];
+    reservationsCache.unshift(optimisticRes);
+    renderReservations(reservationsCache, $('#reservationsList'));
+    
+    // Fermeture immédiate du modal
+    modal.classList.remove('active');
+    form.reset();
+    $('#sortieAnnee').value = new Date().getFullYear();
+    $('#selectedTimeDisplay').textContent = 'Sélectionner l\'heure';
+    $('#selectedTimeDisplay').className = 'placeholder';
+    $('#sortieHeure').value = '';
+    btn.disabled = false; btn.textContent = 'Créer la réservation';
+
+    // Synchronisation silencieuse
+    api('/api/action', {
+      method: 'POST',
+      body: {
+        action: 'create_reservation',
+        payload: {
+          reservation: {
+            nombre_jours_reserves: nbJours,
+            date_heure_iso: dateHeure.toISOString()
           }
         }
-      });
-
+      }
+    }).then(realData => {
+      // Remplacement par les vraies données
+      const idx = reservationsCache.findIndex(r => r.id === tempId);
+      if (idx !== -1) reservationsCache[idx] = realData;
+      allReservationsCache = null; // Invalider le calendrier universel
+      renderReservations(reservationsCache, $('#reservationsList'));
       showToast('Réservation créée !');
-      modal.classList.remove('active');
-      form.reset();
-      $('#sortieAnnee').value = new Date().getFullYear();
-      $('#selectedTimeDisplay').textContent = 'Sélectionner l\'heure';
-      $('#selectedTimeDisplay').className = 'placeholder';
-      $('#sortieHeure').value = '';
-      
-      // Invalidation des caches après modification
-      reservationsCache = null;
-      allReservationsCache = null;
-      loadPierreReservations();
-    } catch (err) {
+    }).catch(err => {
       console.error(err);
+      // Annulation de l'optimisme
+      const idx = reservationsCache.findIndex(r => r.id === tempId);
+      if (idx !== -1) reservationsCache.splice(idx, 1);
+      renderReservations(reservationsCache || [], $('#reservationsList'));
       showToast('Erreur lors de la création', 'error');
-    }
-    btn.disabled = false; btn.textContent = 'Créer la réservation';
+    });
   });
 }
 
@@ -544,6 +564,9 @@ function renderProrataTable() {
     const isSelected = selectedProrataMonths.has(m);
 
     html += `<tr class="${isSelected ? 'selected' : ''}" data-month="${m}">
+      <td class="checkbox-cell">
+        <input type="checkbox" class="custom-checkbox" data-month="${m}" ${isSelected ? 'checked' : ''} />
+      </td>
       <td class="month-name">${MONTH_NAMES[m - 1]}</td>
       <td><input type="number" class="table-input" data-month="${m}" data-field="nombre_jours_reserves" value="${joursOcc || ''}" readonly title="Calculé automatiquement depuis vos réservations" /></td>
       <td><input type="number" class="table-input" data-month="${m}" data-field="nombre_jours_dans_le_mois" value="${joursMois}" readonly title="Géré automatiquement" /></td>
@@ -558,16 +581,30 @@ function renderProrataTable() {
   tbody.querySelectorAll('.table-input').forEach(inp => {
     inp.addEventListener('change', handleProrataChange);
     inp.addEventListener('focus', () => inp.select());
-    inp.addEventListener('click', (e) => e.stopPropagation()); // Éviter de déselectionner la ligne
+    inp.addEventListener('click', (e) => e.stopPropagation()); // Éviter de cocher la ligne
   });
 
-  tbody.querySelectorAll('tr').forEach(tr => {
-    tr.addEventListener('click', () => {
-      const m = parseInt(tr.dataset.month);
-      if (selectedProrataMonths.has(m)) selectedProrataMonths.delete(m);
-      else selectedProrataMonths.add(m);
-      renderProrataTable();
+  tbody.querySelectorAll('.custom-checkbox').forEach(chk => {
+    chk.addEventListener('change', () => {
+      const m = parseInt(chk.dataset.month);
+      if (chk.checked) selectedProrataMonths.add(m);
+      else selectedProrataMonths.delete(m);
+      
+      const tr = chk.closest('tr');
+      if (tr) tr.classList.toggle('selected', chk.checked);
       updateCleanupBtn();
+    });
+  });
+
+  // Possibilité de cliquer sur la cellule de la checkbox
+  tbody.querySelectorAll('.checkbox-cell').forEach(cell => {
+    cell.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      const chk = cell.querySelector('.custom-checkbox');
+      if (chk) {
+        chk.checked = !chk.checked;
+        chk.dispatchEvent(new Event('change'));
+      }
     });
   });
 }

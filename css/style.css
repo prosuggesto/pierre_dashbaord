@@ -800,3 +800,22 @@ input[type=number]{-moz-appearance:textfield}
   background: #ff3355;
   box-shadow: 0 4px 12px rgba(255, 77, 106, 0.2);
 }
+
+/* Sélection par Case à cocher */
+.checkbox-cell {
+  text-align: center;
+  padding: 0 4px !important;
+}
+.custom-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--error);
+}
+
+/* État optimiste pour les réservations */
+.reservation-card.is-optimistic {
+  opacity: 0.6;
+  border-style: dashed;
+  pointer-events: none;
+}
