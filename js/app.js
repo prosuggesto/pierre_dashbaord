@@ -233,7 +233,7 @@ function getReservationCardHTML(r, silent = false) {
       </div>
       <div class="card-title" style="padding-right:110px;">📅 Réservation #${r.id}${isOpt ? ' (En cours…)' : ''}</div>
       <div class="card-info">
-        <div class="card-info-row"><span class="label">Nombre de jours</span><span class="value">${r.nombre_jours_reserves} jour${r.nombre_jours_reserves > 1 ? 's' : ''}</span></div>
+        <div class="card-info-row"><span class="label">Nombre de nuits</span><span class="value">${r.nombre_jours_reserves} nuit${r.nombre_jours_reserves > 1 ? 's' : ''}</span></div>
         <div class="card-info-row"><span class="label">Sortie prévue</span><span class="value">${formatDateTime(r.date_heure_menage)}</span></div>
         <div class="card-info-row"><span class="label">Créée le</span><span class="value">${formatDate(r.created_at)}</span></div>
       </div>
@@ -604,7 +604,7 @@ function renderProrataTable() {
         <input type="checkbox" class="custom-checkbox" data-month="${m}" ${isSelected ? 'checked' : ''} />
       </td>
       <td class="month-name">${MONTH_NAMES[m - 1]}</td>
-      <td><input type="number" class="table-input" data-month="${m}" data-field="nombre_jours_reserves" value="${joursOcc || ''}" readonly title="Calculé automatiquement depuis vos réservations" /></td>
+      <td><input type="number" class="table-input" data-month="${m}" data-field="nombre_jours_reserves" value="${joursOcc || ''}" readonly title="Calculé automatiquement depuis vos nuits réservées" /></td>
       <td><input type="number" class="table-input" data-month="${m}" data-field="nombre_jours_dans_le_mois" value="${joursMois}" readonly title="Géré automatiquement" /></td>
       <td><input type="number" class="table-input ${!elValid ? 'error' : ''}" data-month="${m}" data-field="total_facture_electricite" value="${totElec || ''}" min="0" step="0.01" placeholder="ex: 150" /></td>
       <td><input type="number" class="table-input ${!eaValid ? 'error' : ''}" data-month="${m}" data-field="total_facture_eau" value="${totEau || ''}" min="0" step="0.01" placeholder="ex: 80" /></td>
